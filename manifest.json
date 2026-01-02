@@ -1,0 +1,18 @@
+
+{
+  "name": "ArtNexus Pro 艺策",
+  "short_name": "艺策",
+  "description": "插画师智能生产管理系统",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1055/1055666.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
