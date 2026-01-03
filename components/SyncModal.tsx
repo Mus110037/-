@@ -21,7 +21,10 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
   const isSandboxed = window.self !== window.top;
   const supportsFileSystemAPI = 'showSaveFilePicker' in window;
   const supportsShare = typeof navigator.share !== 'undefined';
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  
+  // 优化移动端检测，包含 iPadOS (iPadOS 经常伪装成 MacIntel 但支持多点触控)
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   // 监听全局自动保存事件
   useEffect(() => {
@@ -62,9 +65,9 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
   const handleLinkFile = async () => {
     setError(null);
     
-    // 如果是手机端或不支持 FileSystem API
+    // 如果是手机/iPad端或不支持 FileSystem API
     if (!supportsFileSystemAPI) {
-      if (isMobile && supportsShare) {
+      if (supportsShare) {
         handleMobileShare();
       } else {
         handleQuickExport();
@@ -94,26 +97,33 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
       showToastAndClose("文件已关联并同步最新内容");
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        setError({ title: "关联失败", msg: "无法建立连接。由于系统安全限制，移动端请使用一键备份功能。" });
+        setError({ title: "关联失败", msg: "无法建立连接。由于系统安全限制，移动端/iPad 请使用一键备份功能。" });
       }
     }
   };
 
-  // 针对 iPhone 的优化：一键分享/存入 iCloud
+  // 针对 iOS/iPadOS 的优化：一键分享/存入 iCloud
   const handleMobileShare = async () => {
     const dataStr = JSON.stringify(orders, null, 2);
     const fileName = `artnexus_backup_${new Date().toISOString().split('T')[0]}.json`;
     const file = new File([dataStr], fileName, { type: 'application/json' });
 
     try {
-      await navigator.share({
-        files: [file],
-        title: '艺策企划备份',
-        text: '这是您的最新企划排期备份文件。'
-      });
-      showToastAndClose("已导出至分享菜单");
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: '艺策企划备份',
+          text: '这是您的最新企划排期备份文件。'
+        });
+        showToastAndClose("已开启分享菜单");
+      } else {
+        // 如果不支持文件分享，尝试分享文本（备选方案）
+        handleQuickExport();
+      }
     } catch (err) {
-      handleQuickExport(); // 回退到普通下载
+      if (err instanceof Error && err.name !== 'AbortError') {
+        handleQuickExport(); // 回退到普通下载
+      }
     }
   };
 
@@ -125,7 +135,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
     link.href = url;
     link.download = `artnexus_backup_${new Date().toISOString().split('T')[0]}.json`;
     link.click();
-    showToastAndClose("备份文件已下载");
+    showToastAndClose("备份文件已准备下载");
   };
 
   if (!isOpen) return null;
@@ -164,7 +174,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
           )}
 
           <div className="space-y-3">
-            <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest px-1">数据云存 (iPhone/PC)</h3>
+            <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest px-1">云端/本地存储</h3>
             <button 
               onClick={handleLinkFile}
               className={`w-full flex items-center justify-between p-6 rounded-3xl transition-all group shadow-lg ${!supportsFileSystemAPI ? 'bg-[#3A5A40] text-white' : 'bg-[#2D3A30] text-white'}`}
@@ -175,10 +185,10 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                 </div>
                 <div>
                   <p className="font-bold text-sm tracking-tight">
-                    {supportsFileSystemAPI ? '关联本地文件 (PC推荐)' : '一键备份至 iCloud/网盘'}
+                    {supportsFileSystemAPI ? '关联本地文件 (PC推荐)' : '一键分享至 iCloud/文件'}
                   </p>
                   <p className="text-[9px] text-white/60 mt-0.5 font-medium">
-                    {supportsFileSystemAPI ? '开启时自动读取最新文件' : '由于系统限制，iPhone需点击此按钮存入云盘'}
+                    {supportsFileSystemAPI ? '开启时自动读取最新文件' : '支持 iPhone/iPad，点击后选“存储到文件”'}
                   </p>
                 </div>
               </div>
@@ -194,17 +204,17 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
             </h3>
             <div className="space-y-2">
               {localBackups.length > 0 ? localBackups.map((snap, i) => (
-                <button key={i} onClick={() => { onImportOrders?.(snap.data); showToastAndClose("已载入快照"); }} className="w-full flex items-center justify-between p-4 bg-white border border-[#E2E8E4] rounded-2xl hover:border-[#3A5A40] transition-all group">
+                <button key={i} onClick={() => { onImportOrders?.(snap.data); showToastAndClose("已载入历史快照"); }} className="w-full flex items-center justify-between p-4 bg-white border border-[#E2E8E4] rounded-2xl hover:border-[#3A5A40] transition-all group">
                   <div className="flex items-center gap-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-[#D1D9D3] group-hover:bg-[#3A5A40]"></div>
                     <span className="text-[11px] font-bold text-slate-600">{snap.time}</span>
-                    <span className="text-[9px] text-[#4F6D58]">({snap.data.length} 条)</span>
+                    <span className="text-[9px] text-[#4F6D58]">({snap.data.length} 条记录)</span>
                   </div>
-                  <span className="text-[9px] font-black text-[#3A5A40] opacity-0 group-hover:opacity-100">恢复</span>
+                  <span className="text-[9px] font-black text-[#3A5A40] opacity-0 group-hover:opacity-100">立即恢复</span>
                 </button>
               )) : (
                 <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-[#D1D9D3]">
-                  <p className="text-[10px] text-[#D1D9D3] font-bold uppercase tracking-widest">暂无记录</p>
+                  <p className="text-[10px] text-[#D1D9D3] font-bold uppercase tracking-widest">暂无本地记录</p>
                 </div>
               )}
             </div>
@@ -212,18 +222,25 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
 
           <div className="grid grid-cols-2 gap-3 pt-2">
              <button onClick={() => fileInputRef.current?.click()} className="p-4 bg-white border border-[#E2E8E4] rounded-2xl text-[10px] font-bold text-[#4F6D58] hover:text-[#2D3A30] flex items-center justify-center gap-2">
-                <Upload className="w-3 h-3" /> 载入本地
+                <Upload className="w-3 h-3" /> 导入备份
                 <input type="file" ref={fileInputRef} onChange={e => {
                   const file = e.target.files?.[0];
                   if (file) {
                     const reader = new FileReader();
-                    reader.onload = (ev) => onImportOrders?.(JSON.parse(ev.target?.result as string));
+                    reader.onload = (ev) => {
+                       try {
+                         onImportOrders?.(JSON.parse(ev.target?.result as string));
+                         showToastAndClose("导入成功");
+                       } catch(e) {
+                         alert("文件格式有误");
+                       }
+                    };
                     reader.readAsText(file);
                   }
                 }} className="hidden" />
              </button>
              <button onClick={handleQuickExport} className="p-4 bg-white border border-[#E2E8E4] rounded-2xl text-[10px] font-bold text-[#4F6D58] hover:text-[#2D3A30] flex items-center justify-center gap-2">
-                <Download className="w-3 h-3" /> 导出文件
+                <Download className="w-3 h-3" /> 下载副本
              </button>
           </div>
         </div>
