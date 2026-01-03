@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Order, OrderStatus, STAGE_PROGRESS_MAP } from '../types';
-import { MoreHorizontal, Edit2, Zap, ArrowUpDown, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
+import { MoreHorizontal, Edit2, Zap, ArrowUpDown, Calendar as CalendarIcon, CheckCircle2, Share2, DownloadCloud } from 'lucide-react';
 
 interface OrderListProps {
   orders: Order[];
@@ -40,23 +40,63 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onAddNew, onEditOrder }) 
     }
   };
 
-  // 生成 Google 日历链接
-  const handleAddToCalendar = (order: Order) => {
+  // 1. 生成 Google 日历链接 (云端方案)
+  const handleAddToGoogleCalendar = (order: Order) => {
     const ddl = order.deadline.replace(/-/g, '');
     const isCompleted = order.progressStage === '成稿';
     const statusEmoji = isCompleted ? '✅' : '⏳';
     
     const title = encodeURIComponent(`${statusEmoji} 排单: ${order.title} [${order.source}]`);
     const details = encodeURIComponent(
-      `企划进度: ${order.progressStage}\n` +
+      `进度: ${order.progressStage}\n` +
       `金额: ¥${order.totalPrice}\n` +
-      `录入时间: ${order.createdAt}\n` +
       `备注: ${order.description}\n\n` +
-      `来自 ArtNexus Pro 艺策`
+      `来自 艺策ArtNexus`
     );
     
     const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${ddl}/${ddl}&details=${details}&location=${encodeURIComponent(order.source)}`;
     window.open(url, '_blank');
+  };
+
+  // 2. 生成 .ics 文件 (原生/苹果日历方案)
+  const handleDownloadICS = (order: Order) => {
+    const ddl = order.deadline.replace(/-/g, '');
+    const isCompleted = order.progressStage === '成稿';
+    const statusEmoji = isCompleted ? '✅' : '⏳';
+    
+    const title = `${statusEmoji} 排单: ${order.title}`;
+    const description = `进度: ${order.progressStage} | 金额: ¥${order.totalPrice} | 备注: ${order.description}`;
+    
+    // 构建 iCalendar 格式字符串
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PROID:-//ArtNexus//Pro//CN',
+      'BEGIN:VEVENT',
+      `UID:${order.id}@artnexus.pro`,
+      `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+      `DTSTART;VALUE=DATE:${ddl}`,
+      `DTEND;VALUE=DATE:${ddl}`,
+      `SUMMARY:${title}`,
+      `DESCRIPTION:${description}`,
+      `LOCATION:${order.source}`,
+      'BEGIN:VALARM',
+      'TRIGGER:-PT9H', // 提前 9 小时提醒（当天早上）
+      'ACTION:DISPLAY',
+      'DESCRIPTION:Reminder',
+      'END:VALARM',
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${order.title}_日程.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -100,7 +140,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onAddNew, onEditOrder }) 
               <th className="px-8 py-4 w-52">核心进度条</th>
               <th className="px-8 py-4 w-32">来源</th>
               <th className="px-8 py-4 w-32">金额</th>
-              <th className="px-8 py-4 w-44 text-right">操作</th>
+              <th className="px-8 py-4 w-44 text-right">同步与操作</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -160,11 +200,18 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onAddNew, onEditOrder }) 
                   <td className="px-8 py-5 text-right">
                     <div className="flex items-center justify-end gap-1">
                         <button 
-                            onClick={() => handleAddToCalendar(order)}
-                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                            title="添加至 Google 日历"
+                            onClick={() => handleDownloadICS(order)}
+                            className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                            title="导出为本地日历事项 (.ics) - 苹果日历推荐"
                         >
                             <CalendarIcon className="w-4 h-4" />
+                        </button>
+                        <button 
+                            onClick={() => handleAddToGoogleCalendar(order)}
+                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                            title="添加至 Google 日历 (网页同步)"
+                        >
+                            <Share2 className="w-4 h-4" />
                         </button>
                         <button 
                             onClick={() => onEditOrder(order)}
