@@ -96,13 +96,20 @@ const App: React.FC = () => {
 
   const handleSaveOrder = (newOrder: Order) => {
     const orderWithVersion = { ...newOrder, updatedAt: new Date().toISOString(), version: (newOrder.version || 0) + 1 };
-    if (editingOrder || orders.some(o => o.id === newOrder.id)) {
+    const orderExists = orders.some(o => o.id === newOrder.id);
+    
+    if (orderExists) {
       setOrders(orders.map(o => o.id === newOrder.id ? orderWithVersion : o));
     } else {
       setOrders([...orders, { ...orderWithVersion, createdAt: new Date().toISOString().split('T')[0] }]);
       if (showGuide) handleDismissGuide();
     }
     setEditingOrder(null);
+  };
+
+  const handleDeleteOrder = (id: string) => {
+    setOrders(orders.filter(o => o.id !== id));
+    setPriorityOrderIds(priorityOrderIds.filter(pid => pid !== id));
   };
 
   const handleImportOrders = (newOrders: Order[], mode: 'append' | 'merge' | 'replace' = 'merge') => {
@@ -120,32 +127,25 @@ const App: React.FC = () => {
     setIsCreateModalOpen(true);
   };
 
-  const handleDeleteOrder = (id: string) => {
-    if (confirm('确定删除此企划吗？')) {
-      setOrders(orders.filter(o => o.id !== id));
-      setPriorityOrderIds(prev => prev.filter(pid => pid !== id));
-    }
-  };
-
   return (
-    <div className="flex min-h-screen bg-[#F5F6F1] text-[#1A221B]">
+    <div className="flex min-h-screen bg-[#F4F1EA] text-[#2C332D]">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-1 p-4 md:p-8 pb-24 lg:pb-10 overflow-y-auto custom-scrollbar">
         <header className="flex items-center justify-between gap-4 mb-6">
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-black text-[#1B241D] truncate tracking-tight uppercase">
+            <h1 className="text-xl md:text-2xl font-black text-[#2D3A30] truncate tracking-tight uppercase">
               {activeTab === 'dashboard' ? 'Overview' : activeTab === 'calendar' ? 'Schedule' : activeTab === 'orders' ? 'Projects' : activeTab === 'finance' ? 'Finance' : activeTab === 'settings' ? 'Settings' : 'AI Assistant'}
             </h1>
           </div>
           
           <div className="flex items-center gap-2 shrink-0 relative">
-            <button onClick={() => setIsImportModalOpen(true)} className="hidden md:flex items-center gap-2 px-5 py-3 bg-[#FCFDF9] text-[#3A5A40] border border-[#D6DED8] rounded-xl hover:bg-[#D6DED8] transition-all group">
+            <button onClick={() => setIsImportModalOpen(true)} className="hidden md:flex items-center gap-2 px-5 py-3 bg-[#FDFBF7] text-[#4B5E4F] border border-[#D6D2C4] rounded-xl hover:bg-[#EDE9DF] transition-all group shadow-sm">
               <Wand2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
               <span className="font-bold text-[11px] uppercase tracking-widest">排单助手</span>
             </button>
-            <button onClick={() => setIsSyncModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-3 md:px-5 bg-white text-[#3A5A40] border border-[#D6DED8] rounded-xl hover:bg-slate-50 transition-all shadow-sm">
+            <button onClick={() => setIsSyncModalOpen(true)} className="flex items-center justify-center gap-2 px-3 py-3 md:px-5 bg-[#FDFBF7] text-[#4B5E4F] border border-[#D6D2C4] rounded-xl hover:bg-slate-50 transition-all shadow-sm">
               <FileSpreadsheet className="w-4 h-4" /> 
               <span className="hidden md:inline font-bold text-[11px] uppercase tracking-widest">同步中心</span>
             </button>
@@ -153,17 +153,17 @@ const App: React.FC = () => {
             <div className="relative">
               <button 
                 onClick={() => setIsCreateModalOpen(true)} 
-                className="p-3 bg-[#3A5A40] text-white border border-[#3A5A40] rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all"
+                className="p-3 bg-[#4B5E4F] text-white border border-[#4B5E4F] rounded-xl shadow-lg hover:scale-110 active:scale-95 transition-all"
               >
                 <Plus className="w-5 h-5" /> 
               </button>
               
               {showGuide && (
                 <div className="absolute top-14 right-0 z-[100] animate-in slide-in-from-top-4 duration-700">
-                  <div className="bg-[#1B241D] text-white px-5 py-4 rounded-xl shadow-2xl min-w-[200px] relative">
-                    <div className="absolute -top-1.5 right-4 w-3 h-3 bg-[#1B241D] rotate-45"></div>
+                  <div className="bg-[#2D3A30] text-white px-5 py-4 rounded-xl shadow-2xl min-w-[200px] relative">
+                    <div className="absolute -top-1.5 right-4 w-3 h-3 bg-[#2D3A30] rotate-45"></div>
                     <div className="flex items-start gap-3">
-                      <HelpCircle className="w-4 h-4 text-[#A3B18A] mt-0.5 shrink-0" />
+                      <HelpCircle className="w-4 h-4 text-[#B2B7A5] mt-0.5 shrink-0" />
                       <div>
                         <p className="text-[11px] font-black uppercase tracking-widest mb-1">新手引导</p>
                         <p className="text-[10px] text-white/70 leading-relaxed">开启您的第一个创作企划。</p>
@@ -183,8 +183,8 @@ const App: React.FC = () => {
         </header>
 
         {insights && (
-          <div className="mb-6 p-4 bg-[#FCFDF9] border border-[#D6DED8] rounded-xl text-[#2D3A30] flex items-start gap-4 shadow-sm">
-            <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-[#3A5A40]" />
+          <div className="mb-6 p-4 bg-[#FDFBF7] border border-[#D6D2C4] rounded-xl text-[#2D332D] flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-left-2">
+            <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-[#4B5E4F]" />
             <p className="text-[11px] font-bold leading-relaxed tracking-wide">{insights}</p>
           </div>
         )}
@@ -195,12 +195,12 @@ const App: React.FC = () => {
         {activeTab === 'finance' && <FinanceView orders={orders} settings={settings} />}
         {activeTab === 'settings' && <SettingsView settings={settings} setSettings={handleUpdateSettings} />}
         {activeTab === 'ai-assistant' && (
-          <div className="bg-[#FCFDF9] rounded-2xl p-12 border border-[#D6DED8] max-w-2xl mx-auto mt-4 text-center">
-            <div className="bg-[#3A5A40] w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-8 shadow-xl">
+          <div className="bg-[#FDFBF7] rounded-2xl p-12 border border-[#D6D2C4] max-w-2xl mx-auto mt-4 text-center shadow-sm">
+            <div className="bg-[#4B5E4F] w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-8 shadow-xl">
               <BrainCircuit className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-xl font-bold mb-4 text-[#2D3A30] tracking-tight">AI 调度分析助手</h2>
-            <button onClick={() => getSchedulingInsights(orders).then(setInsights)} className="w-full bg-[#3A5A40] text-white py-4 rounded-xl font-bold hover:opacity-95 shadow-lg">
+            <button onClick={() => getSchedulingInsights(orders).then(setInsights)} className="w-full bg-[#4B5E4F] text-white py-4 rounded-xl font-bold hover:opacity-95 shadow-lg active:scale-[0.98] transition-all">
               <Sparkles className="w-4 h-4 inline mr-2" /> 立即分析
             </button>
           </div>

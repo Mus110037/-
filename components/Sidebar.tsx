@@ -18,15 +18,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   ];
 
   return (
-    <div className="hidden lg:flex w-64 bg-white border-r border-[#E2E8E4] h-screen flex-col sticky top-0 shadow-[1px_0_0_rgba(0,0,0,0.01)] transition-colors">
+    <div className="hidden lg:flex w-64 bg-[#EDE9DF] border-r border-[#D6D2C4] h-screen flex-col sticky top-0 shadow-[1px_0_0_rgba(0,0,0,0.02)] transition-colors">
       <div className="p-8 mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-[#3A5A40] text-white rounded-xl shadow-md">
+          <div className="p-2.5 bg-[#4B5E4F] text-[#FDFBF7] rounded-xl shadow-md">
              <Palette className="w-5 h-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-extrabold tracking-tight text-[#2D3A30]">艺策 ArtNexus</span>
-            <span className="text-[8px] text-[#4F6D58] font-black uppercase tracking-[0.25em] mt-0.5">Management Pro</span>
+            <span className="text-lg font-extrabold tracking-tight text-[#2C332D]">艺策 ArtNexus</span>
+            <span className="text-[8px] text-[#7A8B7C] font-black uppercase tracking-[0.25em] mt-0.5">Natural Studio</span>
           </div>
         </div>
       </div>
@@ -38,25 +38,25 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
             onClick={() => setActiveTab(item.id)}
             className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all group ${
               activeTab === item.id 
-                ? 'bg-[#F2F4F0] text-[#1B241D] font-bold shadow-sm' 
-                : 'text-[#4F6D58] hover:bg-[#F2F4F0]/60'
+                ? 'bg-[#FDFBF7] text-[#2C332D] font-bold shadow-sm' 
+                : 'text-[#7A8B7C] hover:bg-[#FDFBF7]/40'
             }`}
           >
-            <item.icon className={`w-4 h-4 transition-colors ${activeTab === item.id ? 'text-[#3A5A40]' : 'text-[#D1D9D3]'}`} />
+            <item.icon className={`w-4 h-4 transition-colors ${activeTab === item.id ? 'text-[#4B5E4F]' : 'text-[#A8A291]'}`} />
             <span className="text-[13px] tracking-tight font-medium">{item.label}</span>
             {activeTab === item.id && (
-              <div className="ml-auto w-1.5 h-1.5 bg-[#3A5A40] rounded-full shadow-[0_0_8px_rgba(58,90,64,0.4)]"></div>
+              <div className="ml-auto w-1.5 h-1.5 bg-[#4B5E4F] rounded-full shadow-[0_0_8px_rgba(75,94,79,0.3)]"></div>
             )}
           </button>
         ))}
       </nav>
       
       <div className="p-6 mt-auto">
-        <div className="bg-[#EDF1EE] p-5 rounded-2xl border border-[#D1D9D3]">
-          <p className="text-[9px] font-black text-[#4F6D58] uppercase tracking-widest mb-1.5">System Status</p>
+        <div className="bg-[#E5E1D5] p-5 rounded-2xl border border-[#D6D2C4]">
+          <p className="text-[9px] font-black text-[#7A8B7C] uppercase tracking-widest mb-1.5">Focus Mode</p>
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-[#3A5A40] rounded-full animate-pulse"></div>
-            <p className="text-[10px] text-[#2D3A30] font-extrabold tracking-wide">云同步就绪</p>
+            <div className="w-1.5 h-1.5 bg-[#4B5E4F] rounded-full animate-pulse"></div>
+            <p className="text-[10px] text-[#2C332D] font-extrabold tracking-wide">保护视力模式已启动</p>
           </div>
         </div>
       </div>

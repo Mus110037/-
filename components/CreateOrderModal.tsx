@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Calendar, DollarSign, AlignLeft, Users, ShieldCheck, Trash2, Zap, Brush, Layers, Activity, Star, Clock, Briefcase, User, ChevronDown } from 'lucide-react';
+import { X, DollarSign, Users, ShieldCheck, Brush, Briefcase, User, ChevronDown, Activity, Star, Clock, Trash2 } from 'lucide-react';
 import { Order, OrderStatus, CommissionType, AppSettings } from '../types';
 
 interface CreateOrderModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (order: Order) => void;
-  onDelete?: (orderId: string) => void;
+  onDelete: (id: string) => void;
   initialOrder?: Order | null;
   settings: AppSettings;
 }
@@ -92,6 +92,13 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
     };
     onSave(orderData);
     onClose();
+  };
+
+  const handleDelete = () => {
+    if (initialOrder && window.confirm('确定要永久删除此企划吗？此操作无法撤销。')) {
+      onDelete(initialOrder.id);
+      onClose();
+    }
   };
 
   const isCompleted = settings.stages.find(s => s.name === formData.progressStage)?.progress === 100;
@@ -218,7 +225,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                 </div>
               </div>
 
-              {/* 创作进度 (模仿图1样式) */}
+              {/* 创作进度 */}
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2.5 tracking-widest flex items-center gap-2">
                   当前进度阶段
@@ -278,8 +285,14 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
           </div>
 
           <div className="flex gap-4 pt-4 md:pt-6">
-            {initialOrder && onDelete && (
-              <button type="button" onClick={() => { if(confirm('确定删除此企划吗？此操作无法撤销。')) { onDelete(initialOrder.id); onClose(); } }} className="px-6 py-4 rounded-xl bg-slate-50 text-slate-300 hover:text-red-600 hover:bg-red-50 transition-all font-bold border border-slate-100"><Trash2 className="w-5 h-5" /></button>
+            {initialOrder && (
+              <button 
+                type="button" 
+                onClick={handleDelete}
+                className="px-6 py-4 rounded-xl font-bold text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 transition-all flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-5 h-5" /> 删除企划
+              </button>
             )}
             <button type="submit" className="flex-1 px-8 py-4 rounded-xl font-bold text-white bg-slate-900 shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
               <ShieldCheck className="w-5 h-5" /> {initialOrder ? '完成更新' : '开始排单'}

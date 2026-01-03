@@ -51,13 +51,13 @@ export interface Order {
 }
 
 export const DEFAULT_STAGES: StageConfig[] = [
-  { name: '未开始', progress: 0, color: '#94A3B8' },
-  { name: '构图/动态', progress: 15, color: '#3B82F6' },
-  { name: '色稿', progress: 30, color: '#5856D6' },
-  { name: '草稿', progress: 50, color: '#AF52DE' },
-  { name: '线稿', progress: 70, color: '#34C759' },
-  { name: '细化', progress: 90, color: '#FF2D55' },
-  { name: '成稿', progress: 100, color: '#1C1C1E' }
+  { name: '未开始', progress: 0, color: '#A8A291' },
+  { name: '构图/动态', progress: 15, color: '#7A8B7C' },
+  { name: '色稿', progress: 30, color: '#90A19D' },
+  { name: '草稿', progress: 50, color: '#B2B7A5' },
+  { name: '线稿', progress: 70, color: '#4B5E4F' },
+  { name: '细化', progress: 90, color: '#D4A373' },
+  { name: '成稿', progress: 100, color: '#3D4C41' }
 ];
 
 export const DEFAULT_SOURCES: SourceConfig[] = [
