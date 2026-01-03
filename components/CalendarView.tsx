@@ -41,63 +41,63 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
     const isP0 = order.priority === '高';
     return {
       style: { 
-        backgroundColor: `${stage.color}10`, 
+        backgroundColor: `${stage.color}15`, 
         borderColor: `${stage.color}40`, 
         color: stage.color,
         borderLeftColor: isP0 ? '#000' : `${stage.color}40`,
         borderLeftWidth: isP0 ? '3px' : '1px'
       },
-      className: "text-[8px] md:text-[9px] p-1.5 rounded-lg border truncate cursor-pointer transition-all mb-1 font-bold hover:shadow-sm"
+      className: "text-[7px] md:text-[9px] p-1 md:p-1.5 rounded-md border truncate cursor-pointer transition-all mb-0.5 md:mb-1 font-bold hover:shadow-sm leading-tight"
     };
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-700 pb-10">
+    <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-700 pb-10">
       {/* 当月概览卡片 */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
-            <Wallet className="w-5 h-5" />
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
+        <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3 md:gap-4">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 shrink-0">
+            <Wallet className="w-4 h-4 md:w-5 md:h-5" />
           </div>
-          <div>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">本月预收总额</p>
-            <p className="text-base font-black text-slate-900">¥{monthProjected.toLocaleString()}</p>
+          <div className="min-w-0">
+            <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">本月预收</p>
+            <p className="text-sm md:text-base font-black text-slate-900 truncate">¥{monthProjected.toLocaleString()}</p>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white">
-            <CheckCircle2 className="w-5 h-5" />
+        <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3 md:gap-4">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white shrink-0">
+            <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" />
           </div>
-          <div>
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">本月已收实到</p>
-            <p className="text-base font-black text-slate-900">¥{monthActual.toLocaleString()}</p>
+          <div className="min-w-0">
+            <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">本月实到</p>
+            <p className="text-sm md:text-base font-black text-slate-900 truncate">¥{monthActual.toLocaleString()}</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white">
-          <div className="flex items-center gap-4">
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">{format(currentDate, 'yyyy年 MMMM', { locale: zhCN })}</h2>
-            <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
-              <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1.5 hover:bg-white rounded-md transition-all text-slate-400 hover:text-slate-900"><ChevronLeft className="w-4 h-4" /></button>
-              <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1.5 hover:bg-white rounded-md transition-all text-slate-400 hover:text-slate-900"><ChevronRight className="w-4 h-4" /></button>
+      <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-4 py-4 md:px-6 md:py-5 border-b border-slate-100 flex justify-between items-center bg-white">
+          <div className="flex items-center gap-2 md:gap-4">
+            <h2 className="text-sm md:text-lg font-bold text-slate-900 tracking-tight">{format(currentDate, 'yyyy年 MMMM', { locale: zhCN })}</h2>
+            <div className="flex items-center gap-0.5 bg-slate-50 p-1 rounded-lg border border-slate-200">
+              <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 hover:bg-white rounded-md transition-all text-slate-400 hover:text-slate-900"><ChevronLeft className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:bg-white rounded-md transition-all text-slate-400 hover:text-slate-900"><ChevronRight className="w-3.5 h-3.5" /></button>
             </div>
           </div>
-          <button onClick={() => setCurrentDate(new Date())} className="text-[10px] font-bold text-slate-900 px-4 py-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-all uppercase tracking-widest">今日</button>
+          <button onClick={() => setCurrentDate(new Date())} className="text-[8px] md:text-[10px] font-bold text-slate-900 px-3 py-1.5 md:px-4 md:py-2 bg-slate-50 rounded-lg hover:bg-slate-100 transition-all uppercase tracking-widest">今日</button>
         </div>
         
         <div className="grid grid-cols-7 gap-px bg-slate-100">
           {['一', '二', '三', '四', '五', '六', '日'].map(day => (
-            <div key={day} className="bg-white py-3 text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest">{day}</div>
+            <div key={day} className="bg-white py-2 md:py-3 text-center text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest">{day}</div>
           ))}
           {days.map((day, i) => {
             const dayOrders = orders.filter(o => isSameDay(parseISO(o.deadline), day));
             const isToday = isSameDay(day, new Date());
             return (
-              <div key={i} className={`bg-white min-h-[90px] md:min-h-[140px] p-1.5 transition-colors border-b border-r border-slate-50 ${isToday ? 'bg-slate-50/50' : ''}`}>
-                <div className="flex justify-start mb-1 px-1">
-                   <span className={`text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-lg ${isToday ? 'bg-slate-900 text-white shadow-md' : 'text-slate-300'}`}>
+              <div key={i} className={`bg-white min-h-[60px] md:min-h-[140px] p-1 md:p-1.5 transition-colors border-b border-r border-slate-50 ${isToday ? 'bg-slate-50/50' : ''}`}>
+                <div className="flex justify-start mb-0.5 md:mb-1 px-0.5">
+                   <span className={`text-[9px] md:text-[10px] font-bold w-4 h-4 md:w-6 md:h-6 flex items-center justify-center rounded-md md:rounded-lg ${isToday ? 'bg-slate-900 text-white shadow-md' : 'text-slate-300'}`}>
                     {format(day, 'd')}
                   </span>
                 </div>
@@ -106,12 +106,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
                     const { style, className } = getEventStyle(order);
                     return (
                       <div key={order.id} onClick={() => onEditOrder(order)} className={className} style={style}>
-                        <span className="truncate">{order.title}</span>
+                        <span className="truncate block">{order.title}</span>
                       </div>
                     );
                   })}
                   {dayOrders.length > 3 && (
-                    <div className="text-[7px] text-slate-400 font-bold text-center mt-1">+{dayOrders.length - 3}</div>
+                    <div className="text-[7px] text-slate-400 font-bold text-center mt-0.5">+{dayOrders.length - 3}</div>
                   )}
                 </div>
               </div>
