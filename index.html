@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -12,12 +11,12 @@
     <meta name="apple-mobile-web-app-title" content="艺策ArtNexus">
     <meta name="theme-color" content="#7c3aed">
     
+    <!-- Link Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1055/1055666.png">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Google API Libraries -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
 
     <style>
         body { 
@@ -25,6 +24,7 @@
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: contain;
             background-color: #f8fafc;
+            padding-top: env(safe-area-inset-top);
         }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -52,6 +52,7 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <!-- 使用相对路径引用入口文件，确保在 GitHub 子路径下也能加载 -->
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>
