@@ -6,15 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ArtNexus Pro | 艺策 - 智能插画管理系统</title>
     
-    <!-- PWA Meta Tags -->
+    <!-- PWA Meta Tags & Apple Optimization -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="艺策ArtNexus">
     <meta name="theme-color" content="#3A5A40">
+    <meta name="format-detection" content="telephone=no">
     
-    <!-- Link Manifest -->
+    <!-- Apple Touch Icon (Stylized SVG for premium look) -->
+    <!-- 这是一个由森绿底色和米白图标构成的极简图标设计 -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%233A5A40'/%3E%3Cpath d='M90 45c-24.85 0-45 15.67-45 35 0 8.08 3.55 15.42 9.5 21.12.33.32.5 1.12.5 1.88v22c0 5.52 4.48 10 10 10s10-4.48 10-10v-5c0-2.76 2.24-5 5-5s5 2.24 5 5v5c0 5.52 4.48 10 10 10s10-4.48 10-10v-22c0-.76.17-1.56.5-1.88 5.95-5.7 9.5-13.04 9.5-21.12 0-19.33-20.15-35-45-35zm-20 30c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5zm40 0c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5z' fill='%23F2F4F0'/%3E%3Ctext x='90' y='145' font-family='Plus Jakarta Sans, sans-serif' font-weight='900' font-size='32' text-anchor='middle' fill='%23F2F4F0' letter-spacing='2'%3EART%3C/text%3E%3C/svg%3E">
+    
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1055/1055666.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -24,7 +27,7 @@
             font-family: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif; 
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: contain;
-            background-color: #F2F4F0; /* 森林浅米色 */
+            background-color: #F2F4F0; 
             color: #2D3A30;
             padding-top: env(safe-area-inset-top);
             line-height: 1.6;
@@ -37,13 +40,15 @@
         
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 
-        /* 森林色调扩展 */
         .bg-forest-deep { background-color: #2D3A30; }
-        .bg-forest-fern { background-color: #4F6D58; }
+        .bg-forest-fern { background-color: #3A5A40; }
         .bg-forest-sage { background-color: #A3B18A; }
         .bg-forest-mist { background-color: #E2E8E4; }
         
         .text-forest-dark { color: #1B241D; }
+
+        /* 防止状态栏区域背景色断层 */
+        html { background-color: #3A5A40; }
     </style>
 <script type="importmap">
 {

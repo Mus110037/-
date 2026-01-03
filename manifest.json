@@ -1,17 +1,17 @@
 
 {
-  "name": "ArtNexus Pro 艺策",
+  "name": "ArtNexus Pro | 艺策",
   "short_name": "艺策",
-  "description": "插画师智能生产管理系统",
+  "description": "专为顶尖插画师打造的智能创作排单系统",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#7c3aed",
+  "background_color": "#3A5A40",
+  "theme_color": "#3A5A40",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/1055/1055666.png",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='120' fill='%233A5A40'/%3E%3Cpath d='M256 128c-71 0-128.5 44.8-128.5 100 0 23.1 10.1 44.1 27.1 60.3.9.9 1.4 3.2 1.4 5.4v62.9c0 15.8 12.8 28.6 28.6 28.6s28.6-12.8 28.6-28.6v-14.3c0-7.9 6.4-14.3 14.3-14.3s14.3 6.4 14.3 14.3v14.3c0 15.8 12.8 28.6 28.6 28.6s28.6-12.8 28.6-28.6v-62.9c0-2.2.5-4.5 1.4-5.4 17-16.3 27.1-37.3 27.1-60.3 0-55.2-57.5-100-128.5-100zm-57.1 85.7c7.9 0 14.3 6.4 14.3 14.3s-6.4 14.3-14.3 14.3-14.3-6.4-14.3-14.3 6.4-14.3 14.3-14.3zm114.2 0c7.9 0 14.3 6.4 14.3 14.3s-6.4 14.3-14.3 14.3-14.3-6.4-14.3-14.3 6.4-14.3 14.3-14.3z' fill='%23F2F4F0'/%3E%3C/svg%3E",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
