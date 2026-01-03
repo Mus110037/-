@@ -123,7 +123,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <Brush className="w-4 h-4 text-[#D4A373]" />
-            <h3 className="font-black text-[#2C332D] text-sm uppercase tracking-widest">创作重心 | Priority Focus</h3>
+            <h3 className="font-black text-[#2C332D] text-sm uppercase tracking-widest">创作优先级 | Priority Focus</h3>
           </div>
           <button onClick={() => setIsSelectionModalOpen(true)} className="text-[10px] font-black px-4 py-2 rounded-lg border border-[#D6D2C4] bg-[#FDFBF7] text-[#4B5E4F] hover:bg-[#FDFBF7] hover:border-[#4B5E4F] transition-all uppercase tracking-widest shadow-sm flex items-center gap-1.5 active:scale-95">
             <Plus className="w-3.5 h-3.5" /> 提升
@@ -143,7 +143,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                   <div className="absolute top-0 right-0 p-2 flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
                     <button onClick={(e) => { e.stopPropagation(); movePriorityItem(idx, 'up'); }} className="p-1 bg-[#FDFBF7] border rounded shadow-sm hover:bg-slate-50"><ChevronUp className="w-3 h-3 text-[#7A8B7C]" /></button>
                     <button onClick={(e) => { e.stopPropagation(); movePriorityItem(idx, 'down'); }} className="p-1 bg-[#FDFBF7] border rounded shadow-sm hover:bg-slate-50"><ChevronDown className="w-3 h-3 text-[#7A8B7C]" /></button>
-                    <button onClick={(e) => handleRemoveFromPriority(o, e)} className="p-1 bg-[#FDFBF7] border rounded shadow-sm hover:bg-rose-50 text-rose-400 hover:text-rose-600 border-[#D6D2C4] transition-colors" title="移出重心"><MinusCircle className="w-3 h-3" /></button>
+                    <button onClick={(e) => handleRemoveFromPriority(o, e)} className="p-1 bg-[#FDFBF7] border rounded shadow-sm hover:bg-rose-50 text-rose-400 hover:text-rose-600 border-[#D6D2C4] transition-colors" title="移出优先级"><MinusCircle className="w-3 h-3" /></button>
                   </div>
 
                   <div className="w-1.5 h-10 rounded-full shrink-0" style={{ backgroundColor: stageConfig.color }} />
@@ -166,7 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
           ) : (
             <div className="col-span-1 md:col-span-2 py-10 text-center border-2 border-dashed border-[#D6D2C4] rounded-2xl bg-white/20 flex flex-col items-center justify-center gap-2">
               <Star className="w-5 h-5 text-[#D6D2C4]" />
-              <p className="text-[10px] font-black text-[#A8A291] uppercase tracking-widest">点击“提升”将关键企划移至此处</p>
+              <p className="text-[10px] font-black text-[#A8A291] uppercase tracking-widest">点击“提升”将关键企划设为优先级</p>
             </div>
           )}
         </div>
@@ -178,7 +178,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
             <div className="p-5 border-b border-[#D6D2C4] flex justify-between items-center bg-white">
               <div className="flex items-center gap-2">
                  <Target className="w-4 h-4 text-[#D4A373]" />
-                 <h4 className="font-black text-[#2C332D] uppercase tracking-tight text-xs">选取企划至重心</h4>
+                 <h4 className="font-black text-[#2C332D] uppercase tracking-tight text-xs">设为重点优先级</h4>
               </div>
               <button onClick={() => setIsSelectionModalOpen(false)} className="p-2 text-slate-300 hover:text-slate-900 transition-colors"><X className="w-5 h-5" /></button>
             </div>
