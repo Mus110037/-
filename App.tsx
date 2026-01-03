@@ -91,20 +91,19 @@ const App: React.FC = () => {
       case 'finance': return <FinanceView orders={orders} />;
       case 'ai-assistant':
         return (
-          <div className="bg-white rounded-[2.5rem] p-8 md:p-12 border border-slate-200 max-w-2xl mx-auto mt-4 text-center shadow-sm">
-            <div className="bg-violet-50 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner shadow-violet-100/50">
-              <BrainCircuit className="w-10 h-10 text-violet-700" />
+          <div className="bg-white rounded-[2.5rem] p-10 border border-slate-200 max-w-2xl mx-auto mt-4 text-center shadow-sm">
+            <div className="bg-violet-50 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+              <BrainCircuit className="w-10 h-10 text-violet-600" />
             </div>
-            <h2 className="text-2xl md:text-3xl font-black mb-4 text-slate-800 tracking-tight">AI 排单管家</h2>
-            <p className="text-sm md:text-base text-slate-400 mb-10 leading-relaxed font-medium">
-              基于深度算法分析您的稿件周期，<br/>为您的创作灵感腾出空间。
+            <h2 className="text-2xl font-black mb-4 text-slate-800 tracking-tight">AI 排单管家</h2>
+            <p className="text-xs text-slate-400 mb-10 leading-relaxed font-bold uppercase tracking-widest">
+              深度算法分析稿件周期，让创作更自由
             </p>
             <button 
               onClick={() => getSchedulingInsights(orders).then(setInsights)}
-              className="w-full bg-violet-700 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-violet-800 transition-all shadow-xl shadow-violet-200/50"
+              className="w-full bg-violet-600 text-white py-4 rounded-2xl font-black hover:bg-violet-700 transition-all shadow-xl shadow-violet-100"
             >
-              <Sparkles className="w-5 h-5" />
-              生成深度调度建议
+              <Sparkles className="w-5 h-5 inline mr-2" /> 重新分析调度
             </button>
           </div>
         );
@@ -118,66 +117,50 @@ const App: React.FC = () => {
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-1 p-4 md:p-8 pb-24 lg:pb-8 overflow-y-auto custom-scrollbar">
-        <header className="flex items-center justify-between mb-6 md:mb-8">
+        <header className="flex items-center justify-between mb-8">
           <div className="min-w-0">
-            <h1 className="text-xl md:text-3xl font-black text-slate-800 truncate tracking-tight">
-              {activeTab === 'dashboard' ? '工作台' : 
-               activeTab === 'calendar' ? '排单日历' : 
-               activeTab === 'orders' ? '稿件清单' : 
-               activeTab === 'finance' ? '财务统计' : 'AI 助手'}
+            <h1 className="text-xl md:text-2xl font-black text-slate-800 truncate tracking-tight uppercase">
+              {activeTab === 'dashboard' ? 'Overview' : 
+               activeTab === 'calendar' ? 'Schedule' : 
+               activeTab === 'orders' ? 'Projects' : 
+               activeTab === 'finance' ? 'Finance' : 'AI Assistant'}
             </h1>
-            <div className="flex items-center gap-2 mt-1">
-               <span className="w-2 h-2 rounded-full bg-violet-700 animate-pulse"></span>
-               <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-black">ArtNexus Pro System</p>
+            <div className="flex items-center gap-2 mt-0.5">
+               <span className="w-1.5 h-1.5 rounded-full bg-violet-600 animate-pulse"></span>
+               <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-black">Professional Creative Flow</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setIsSyncModalOpen(true)}
-              className="p-3 bg-white text-slate-600 border border-slate-100 rounded-2xl flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm"
-              title="备份与同步"
+              className="p-3 bg-white text-slate-400 border border-slate-100 rounded-2xl hover:text-emerald-600 hover:bg-emerald-50 transition-all shadow-sm"
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> 
-              <span className="hidden md:inline font-black text-[10px] uppercase tracking-wider">备份恢复</span>
+              <FileSpreadsheet className="w-4 h-4" /> 
             </button>
             <button 
               onClick={() => setIsCreateModalOpen(true)}
-              className="p-3 bg-violet-700 text-white rounded-2xl flex items-center gap-2 hover:bg-violet-800 transition-all shadow-lg shadow-violet-200/40"
+              className="p-3 bg-violet-600 text-white rounded-2xl flex items-center gap-2 hover:bg-violet-700 transition-all shadow-lg shadow-violet-100"
             >
               <Plus className="w-4 h-4" /> 
-              <span className="hidden md:inline font-black text-[10px] uppercase tracking-wider">接稿录入</span>
+              <span className="hidden md:inline font-black text-[10px] uppercase tracking-widest">录入企划</span>
             </button>
           </div>
         </header>
 
         {insights && (
-          <div className="mb-6 md:mb-8 p-4 md:p-5 bg-gradient-to-r from-violet-700 to-indigo-800 rounded-[2.2rem] text-white flex items-start gap-4 shadow-xl shadow-violet-200/40 overflow-hidden relative group">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
-            <Sparkles className="w-5 h-5 mt-1 flex-shrink-0 text-violet-200" />
-            <div className="relative z-10">
-              <p className="text-xs md:text-sm font-bold leading-relaxed tracking-wide">{insights}</p>
-            </div>
+          <div className="mb-8 p-5 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-[2.2rem] text-white flex items-start gap-4 shadow-xl shadow-violet-100 relative overflow-hidden">
+            <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-violet-200" />
+            <p className="text-[11px] font-bold leading-relaxed tracking-wide z-10">{insights}</p>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
           </div>
         )}
 
         {renderContent()}
       </main>
 
-      <CreateOrderModal 
-        isOpen={isCreateModalOpen} 
-        onClose={handleCloseModal} 
-        onSave={handleSaveOrder} 
-        onDelete={handleDeleteOrder}
-        initialOrder={editingOrder}
-      />
-
-      <SyncModal 
-        isOpen={isSyncModalOpen} 
-        onClose={() => setIsSyncModalOpen(false)} 
-        orders={orders}
-        onImportOrders={handleImportOrders}
-      />
+      <CreateOrderModal isOpen={isCreateModalOpen} onClose={handleCloseModal} onSave={handleSaveOrder} onDelete={handleDeleteOrder} initialOrder={editingOrder} />
+      <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={handleImportOrders} />
     </div>
   );
 };
