@@ -12,8 +12,10 @@ import SettingsView from './components/SettingsView';
 import SocialShareModal from './components/SocialShareModal';
 import ImportModal from './components/ImportModal';
 import { Order, OrderStatus, DEFAULT_STAGES, DEFAULT_SOURCES, DEFAULT_ART_TYPES, DEFAULT_PERSON_COUNTS, SAMPLE_ORDERS, AppSettings } from './types';
-import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone, CheckCircle2, Zap, Wand2 } from 'lucide-react';
+import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone, CheckCircle2, Zap, Wand2, Download } from 'lucide-react';
 import { getSchedulingInsights } from './services/geminiService';
+import { format, differenceInDays } from 'date-fns';
+import * as XLSX from 'xlsx';
 
 const STORAGE_KEY = 'artnexus_orders_v5';
 const SETTINGS_KEY = 'artnexus_settings_v5';
@@ -60,6 +62,63 @@ const App: React.FC = () => {
     };
     loadInsights();
   }, [orders]);
+
+  // 导出逻辑
+  const handleExportExcel = () => {
+    if (orders.length === 0) return alert("当前没有可导出的企划数据。");
+
+    const headers = [
+      '企划', '金额', '截稿日期', '加入企划时间', '企划人数', '企划类型', 
+      '进度百分比', '视觉进度条 (核心功能)', '来源', '实收金额', '剩余天数', '完稿日期', '所用时间'
+    ];
+
+    const data = orders.map(o => {
+      const stage = settings.stages.find(s => s.name === o.progressStage) || settings.stages[0];
+      const source = settings.sources.find(s => s.name === o.source) || { name: o.source, fee: 0 };
+      
+      const actualPrice = o.totalPrice * (1 - (source.fee || 0) / 100);
+      
+      let daysLeft = 'N/A';
+      try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const d = new Date(o.deadline.replace(/-/g, '/'));
+        const diff = differenceInDays(d, today);
+        daysLeft = diff === 0 ? '今天截稿' : (diff > 0 ? `还有 ${diff} 天` : `逾期 ${Math.abs(diff)} 天`);
+      } catch (e) {}
+
+      const barLength = 10;
+      const filled = Math.round((stage.progress / 100) * barLength);
+      const visualBar = '[' + '='.repeat(filled) + '-'.repeat(barLength - filled) + ']';
+
+      return [
+        o.title,
+        o.totalPrice,
+        o.deadline,
+        o.createdAt,
+        o.personCount,
+        o.artType,
+        o.progressStage,
+        visualBar,
+        o.source,
+        actualPrice,
+        daysLeft,
+        o.status === OrderStatus.COMPLETED ? o.updatedAt.split('T')[0] : '',
+        o.duration + '天'
+      ];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    ws['!cols'] = [
+      { wch: 25 }, { wch: 10 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, 
+      { wch: 10 }, { wch: 12 }, { wch: 20 }, { wch: 10 }, { wch: 12 }, 
+      { wch: 15 }, { wch: 15 }, { wch: 10 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "企划排单表");
+    XLSX.writeFile(wb, `艺策排单导出_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+  };
 
   const handleSaveOrder = (newOrder: Order) => {
     const orderWithVersion = { 
@@ -155,6 +214,15 @@ const App: React.FC = () => {
             >
               <Wand2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
               <span className="font-bold text-[11px] uppercase tracking-widest">排单助手</span>
+            </button>
+
+            <button 
+              onClick={handleExportExcel}
+              className="hidden md:flex items-center gap-2 px-5 py-3 bg-white text-[#4F6D58] border border-[#D1D9D3] rounded-xl hover:bg-slate-50 transition-all"
+              title="导出当前 Excel 报表"
+            >
+              <Download className="w-4 h-4" />
+              <span className="font-bold text-[11px] uppercase tracking-widest">导出报表</span>
             </button>
 
             <button 

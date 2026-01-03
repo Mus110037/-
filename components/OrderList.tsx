@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { Order, AppSettings } from '../types';
-import { Zap, ArrowUpDown, Smartphone, Download, CalendarCheck, MoreHorizontal } from 'lucide-react';
-import { format } from 'date-fns';
+import { Order, AppSettings, OrderStatus } from '../types';
+import { Zap, ArrowUpDown, Smartphone, Download, CalendarCheck, FileSpreadsheet } from 'lucide-react';
+import { format, differenceInDays } from 'date-fns';
 import { zhCN } from 'date-fns/locale/zh-CN';
+import * as XLSX from 'xlsx';
 
 interface OrderListProps {
   orders: Order[];
@@ -61,19 +62,6 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, settings }) 
             排序: {sortKey === 'deadline' ? '交付日期' : '录入日期'}
           </button>
         </div>
-        
-        <button onClick={() => {
-          const headers = ['标题', '优先级', '金额', '来源', '截止日期'];
-          const rows = sortedOrders.map(o => [o.title, o.priority, o.totalPrice, o.source, o.deadline]);
-          const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
-          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = `艺策导出_${new Date().toISOString().split('T')[0]}.csv`;
-          link.click();
-        }} className="p-3 text-slate-400 hover:text-slate-900 transition-all">
-          <Download className="w-4 h-4" />
-        </button>
       </div>
 
       <div className="divide-y divide-slate-100">
@@ -84,7 +72,6 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, settings }) 
           
           return (
             <div key={order.id} onClick={() => onEditOrder(order)} className="flex items-center gap-4 p-5 hover:bg-slate-50 transition-all cursor-pointer group">
-              {/* 优化后的日期徽章 */}
               <div className="flex flex-col items-center justify-center w-12 h-12 bg-[#2D3A30] rounded-2xl shrink-0 shadow-lg border border-white/5 transition-transform group-hover:scale-105">
                 <span className="text-[16px] font-black text-white leading-none tracking-tighter">
                   {format(deadlineDate, 'dd')}
@@ -108,7 +95,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, settings }) 
               </div>
 
               <div className="text-right shrink-0">
-                <div className="text-[13px] font-black text-slate-900 leading-none">¥{order.totalPrice}</div>
+                <div className="text-[13px] font-black text-slate-900 leading-none">¥{order.totalPrice.toLocaleString()}</div>
                 <div className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{order.source}</div>
               </div>
 
@@ -124,6 +111,11 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, settings }) 
             </div>
           );
         })}
+        {sortedOrders.length === 0 && (
+          <div className="py-20 text-center text-slate-400 font-bold text-xs uppercase tracking-widest">
+            暂无企划数据
+          </div>
+        )}
       </div>
     </div>
   );
