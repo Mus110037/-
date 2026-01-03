@@ -8,21 +8,28 @@ import CalendarView from './components/CalendarView';
 import FinanceView from './components/FinanceView';
 import CreateOrderModal from './components/CreateOrderModal';
 import SyncModal from './components/SyncModal';
-import { Order, OrderStatus } from './types';
-import { Sparkles, BrainCircuit, Plus, FileSpreadsheet } from 'lucide-react';
+import SettingsView from './components/SettingsView';
+import { Order, OrderStatus, DEFAULT_STAGES, DEFAULT_SOURCES, DEFAULT_ART_TYPES, DEFAULT_PERSON_COUNTS, AppSettings } from './types';
+import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Palette } from 'lucide-react';
 import { getSchedulingInsights } from './services/geminiService';
 
-const STORAGE_KEY = 'artnexus_orders_data';
-
-const INITIAL_ORDERS: Order[] = [
-  { id: 'o-1', title: '示例：全彩插画委托', priority: '中', duration: 8, deadline: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0], createdAt: '2025-05-01', status: OrderStatus.PENDING, progressStage: '色稿', commissionType: '商用', personCount: '单人', artType: '全身', source: '米画师', totalPrice: 2400, description: '首次使用请删除此示例' },
-];
+const STORAGE_KEY = 'artnexus_orders_data_v4';
+const SETTINGS_KEY = 'artnexus_app_settings_v4';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    return saved ? JSON.parse(saved) : { 
+      stages: DEFAULT_STAGES, 
+      sources: DEFAULT_SOURCES,
+      artTypes: DEFAULT_ART_TYPES,
+      personCounts: DEFAULT_PERSON_COUNTS
+    };
   });
   const [priorityOrderIds, setPriorityOrderIds] = useState<string[]>([]);
   const [insights, setInsights] = useState<string>("");
@@ -33,6 +40,10 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
   }, [orders]);
+
+  useEffect(() => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }, [settings]);
 
   useEffect(() => {
     const loadInsights = async () => {
@@ -54,10 +65,6 @@ const App: React.FC = () => {
     setEditingOrder(null);
   };
 
-  const handleImportOrders = (imported: Order[]) => {
-    setOrders(imported);
-  };
-
   const handleStartEdit = (order: Order) => {
     setEditingOrder(order);
     setIsCreateModalOpen(true);
@@ -69,98 +76,93 @@ const App: React.FC = () => {
     setEditingOrder(null);
   };
 
-  const handleUpdatePriorityIds = (ids: string[]) => {
-    setPriorityOrderIds(ids);
-  };
-
-  const handleCloseModal = () => {
-    setIsCreateModalOpen(false);
-    setEditingOrder(null);
-  };
-
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': 
         return <Dashboard 
           orders={orders} 
           priorityOrderIds={priorityOrderIds} 
-          onUpdatePriorityIds={handleUpdatePriorityIds} 
+          onUpdatePriorityIds={setPriorityOrderIds}
+          settings={settings}
         />;
-      case 'calendar': return <CalendarView orders={orders} onEditOrder={handleStartEdit} />;
-      case 'orders': return <OrderList orders={orders} onAddNew={() => setIsCreateModalOpen(true)} onEditOrder={handleStartEdit} />;
-      case 'finance': return <FinanceView orders={orders} />;
+      case 'calendar': return <CalendarView orders={orders} onEditOrder={handleStartEdit} settings={settings} />;
+      case 'orders': return <OrderList orders={orders} onEditOrder={handleStartEdit} settings={settings} />;
+      case 'finance': return <FinanceView orders={orders} settings={settings} />;
+      case 'settings': return <SettingsView settings={settings} setSettings={setSettings} />;
       case 'ai-assistant':
         return (
-          <div className="bg-white rounded-[2.5rem] p-10 border border-slate-200 max-w-2xl mx-auto mt-4 text-center shadow-sm">
-            <div className="bg-violet-50 w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
-              <BrainCircuit className="w-10 h-10 text-violet-600" />
+          <div className="bg-white rounded-[3rem] p-12 border border-slate-100 max-w-2xl mx-auto mt-4 text-center shadow-sm">
+            <div className="bg-sky-50 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
+              <BrainCircuit className="w-12 h-12 text-sky-300" />
             </div>
             <h2 className="text-2xl font-black mb-4 text-slate-800 tracking-tight">AI 排单管家</h2>
             <p className="text-xs text-slate-400 mb-10 leading-relaxed font-bold uppercase tracking-widest">
-              深度算法分析稿件周期，让创作更自由
+              分析创作周期，优化交付方案
             </p>
             <button 
               onClick={() => getSchedulingInsights(orders).then(setInsights)}
-              className="w-full bg-violet-600 text-white py-4 rounded-2xl font-black hover:bg-violet-700 transition-all shadow-xl shadow-violet-100"
+              className="w-full bg-[#BEE3F8] text-sky-800 py-4 rounded-2xl font-black hover:bg-sky-200 transition-all shadow-lg shadow-sky-50"
             >
-              <Sparkles className="w-5 h-5 inline mr-2" /> 重新分析调度
+              <Sparkles className="w-5 h-5 inline mr-2" /> 生成智能见解
             </button>
           </div>
         );
-      default: return <Dashboard orders={orders} priorityOrderIds={priorityOrderIds} onUpdatePriorityIds={handleUpdatePriorityIds} />;
+      default: return null;
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50/50">
+    <div className="flex min-h-screen bg-[#FDFDFD]">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
       
-      <main className="flex-1 p-4 md:p-8 pb-24 lg:pb-8 overflow-y-auto custom-scrollbar">
-        <header className="flex items-center justify-between mb-8">
+      <main className="flex-1 p-4 md:p-10 pb-24 lg:pb-10 overflow-y-auto custom-scrollbar">
+        <header className="flex items-center justify-between mb-10">
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-black text-slate-800 truncate tracking-tight uppercase">
+            <h1 className="text-2xl md:text-3xl font-black text-slate-800 truncate tracking-tight uppercase">
               {activeTab === 'dashboard' ? 'Overview' : 
                activeTab === 'calendar' ? 'Schedule' : 
                activeTab === 'orders' ? 'Projects' : 
-               activeTab === 'finance' ? 'Finance' : 'AI Assistant'}
+               activeTab === 'finance' ? 'Finance' : 
+               activeTab === 'settings' ? 'Workspace' : 'AI Assistant'}
             </h1>
-            <div className="flex items-center gap-2 mt-0.5">
-               <span className="w-1.5 h-1.5 rounded-full bg-violet-600 animate-pulse"></span>
-               <p className="text-[9px] text-slate-400 uppercase tracking-[0.2em] font-black">Professional Creative Flow</p>
+            <div className="flex items-center gap-2 mt-1">
+               <span className="w-2 h-2 rounded-full bg-sky-200 animate-pulse"></span>
+               <p className="text-[10px] text-slate-300 uppercase tracking-[0.2em] font-black">Creator's Personal Studio</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setIsSyncModalOpen(true)}
-              className="p-3 bg-white text-slate-400 border border-slate-100 rounded-2xl hover:text-emerald-600 hover:bg-emerald-50 transition-all shadow-sm"
-            >
-              <FileSpreadsheet className="w-4 h-4" /> 
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsSyncModalOpen(true)} className="p-3.5 bg-white text-slate-300 border border-slate-100 rounded-2xl hover:text-emerald-300 hover:bg-emerald-50 transition-all shadow-sm">
+              <FileSpreadsheet className="w-5 h-5" /> 
             </button>
-            <button 
-              onClick={() => setIsCreateModalOpen(true)}
-              className="p-3 bg-violet-600 text-white rounded-2xl flex items-center gap-2 hover:bg-violet-700 transition-all shadow-lg shadow-violet-100"
-            >
-              <Plus className="w-4 h-4" /> 
-              <span className="hidden md:inline font-black text-[10px] uppercase tracking-widest">录入企划</span>
+            <button onClick={() => setIsCreateModalOpen(true)} className="p-3.5 bg-[#BEE3F8] text-sky-800 rounded-2xl flex items-center gap-2 hover:bg-sky-200 transition-all shadow-lg shadow-sky-100/50">
+              <Plus className="w-5 h-5" /> 
+              <span className="hidden md:inline font-black text-[11px] uppercase tracking-widest">录入企划</span>
             </button>
           </div>
         </header>
 
         {insights && (
-          <div className="mb-8 p-5 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-[2.2rem] text-white flex items-start gap-4 shadow-xl shadow-violet-100 relative overflow-hidden">
-            <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-violet-200" />
-            <p className="text-[11px] font-bold leading-relaxed tracking-wide z-10">{insights}</p>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+          <div className="mb-10 p-6 bg-white border border-sky-100 rounded-[2.5rem] text-sky-800 flex items-start gap-4 shadow-sm relative overflow-hidden">
+            <Sparkles className="w-5 h-5 mt-1 flex-shrink-0 text-sky-300" />
+            <p className="text-[12px] font-bold leading-relaxed tracking-wide z-10">{insights}</p>
+            <div className="absolute top-0 right-0 w-48 h-48 bg-sky-50 rounded-full blur-3xl -mr-20 -mt-20"></div>
           </div>
         )}
 
         {renderContent()}
       </main>
 
-      <CreateOrderModal isOpen={isCreateModalOpen} onClose={handleCloseModal} onSave={handleSaveOrder} onDelete={handleDeleteOrder} initialOrder={editingOrder} />
-      <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={handleImportOrders} />
+      <CreateOrderModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => { setIsCreateModalOpen(false); setEditingOrder(null); }} 
+        onSave={handleSaveOrder} 
+        onDelete={handleDeleteOrder} 
+        initialOrder={editingOrder}
+        settings={settings}
+      />
+      <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={setOrders} />
     </div>
   );
 };
