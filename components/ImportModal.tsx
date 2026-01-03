@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Sparkles, Loader2, CheckCircle2, AlertCircle, Clipboard, Wand2, FileSpreadsheet, Info, ChevronRight, AlertTriangle } from 'lucide-react';
+import { X, Camera, Sparkles, Loader2, CheckCircle2, AlertCircle, Clipboard, Wand2, FileSpreadsheet, Info, ChevronRight, AlertTriangle, RefreshCw } from 'lucide-react';
 import { parseMihuashiScreenshot } from '../services/geminiService';
 import { Order, OrderStatus } from '../types';
 import * as XLSX from 'xlsx';
@@ -155,7 +155,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
         const mappedData = dataRows
           .filter(row => row && row.length > 0 && (colIdx.title >= 0 ? row[colIdx.title] : true))
           .map(row => ({
-            title: colIdx.title >= 0 ? row[colIdx.title] : '未命名企划',
+            title: colIdx.title >= 0 ? String(row[colIdx.title]).trim() : '未命名企划',
             totalPrice: colIdx.price >= 0 ? (parseFloat(row[colIdx.price]) || 0) : 0,
             deadline: colIdx.deadline >= 0 ? excelDateToJS(row[colIdx.deadline]) : new Date().toISOString().split('T')[0],
             createdAt: colIdx.createdAt >= 0 ? excelDateToJS(row[colIdx.createdAt]) : new Date().toISOString().split('T')[0],
@@ -248,7 +248,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
                 <div className="p-4 bg-white shadow-md rounded-2xl group-hover:bg-[#3A5A40] group-hover:text-white transition-all text-[#3A5A40]"><FileSpreadsheet className="w-8 h-8" /></div>
                 <div className="text-center px-4">
                   <p className="text-xs font-bold text-[#2D3A30]">Excel/CSV 导入</p>
-                  <p className="text-[9px] text-slate-400 mt-1">智能匹配并全量载入</p>
+                  <p className="text-[9px] text-slate-400 mt-1">智能匹配并合并同步</p>
                 </div>
                 <input type="file" ref={excelInputRef} onChange={e => e.target.files?.[0] && processFile(e.target.files[0])} className="hidden" accept=".xlsx,.xls,.csv" />
               </div>
@@ -276,7 +276,10 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
                     <>
                       <div className="flex items-center justify-between px-2">
                         <h4 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-[0.2em]">待载入项 ({parsedData.length})</h4>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-50 rounded-lg"><Info className="w-3 h-3 text-amber-600" /><span className="text-[8px] text-amber-700 font-black">覆盖模式</span></div>
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-[#EDF1EE] rounded-lg border border-[#D1D9D3] shadow-sm animate-pulse">
+                           <RefreshCw className="w-3 h-3 text-[#3A5A40]" />
+                           <span className="text-[8px] text-[#3A5A40] font-black">智能合并模式已开启</span>
+                        </div>
                       </div>
                       <div className="max-h-64 overflow-y-auto custom-scrollbar space-y-2 pr-2">
                         {parsedData.map((item, i) => (
@@ -290,20 +293,30 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
                         ))}
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <button onClick={handleReset} className="py-4 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-slate-200 hover:bg-slate-100">取消</button>
-                        <button onClick={() => setIsConfirming(true)} className="py-4 bg-[#2D3A30] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-2">下一步 <ChevronRight className="w-4 h-4" /></button>
+                        <button onClick={handleReset} className="py-4 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest border border-slate-200 hover:bg-slate-100 transition-all">取消</button>
+                        <button onClick={() => setIsConfirming(true)} className="py-4 bg-[#2D3A30] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 hover:scale-[1.02] transition-all">下一步 <ChevronRight className="w-4 h-4" /></button>
                       </div>
                     </>
                   ) : (
                     <div className="p-8 text-center space-y-6 animate-in zoom-in duration-300">
-                      <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-2"><AlertTriangle className="w-10 h-10 text-amber-500" /></div>
+                      <div className="w-20 h-20 bg-[#F2F4F0] rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-[#D1D9D3] shadow-inner">
+                        <RefreshCw className="w-10 h-10 text-[#3A5A40]" />
+                      </div>
                       <div>
-                        <h4 className="text-lg font-bold text-slate-900">确认重置工作区？</h4>
-                        <p className="text-xs text-slate-500 mt-2 leading-relaxed">载入操作将<span className="text-rose-600 font-bold">永久删除</span>当前设备上的所有企划数据，并替换为 Excel/截图中的内容。</p>
+                        <h4 className="text-lg font-bold text-slate-900">智能合并同步确认</h4>
+                        <div className="bg-[#EDF1EE] p-5 rounded-[1.5rem] mt-4 border border-[#D1D9D3] text-left">
+                           <ul className="text-[10px] text-[#4F6D58] font-bold space-y-3">
+                              <li className="flex gap-2 items-start"><CheckCircle2 className="w-3.5 h-3.5 text-[#3A5A40] shrink-0" /> 系统将通过企划名称+截稿日期识别重复项并更新。</li>
+                              <li className="flex gap-2 items-start"><CheckCircle2 className="w-3.5 h-3.5 text-[#3A5A40] shrink-0" /> 新企划将自动追加到列表末尾。</li>
+                              <li className="flex gap-2 items-start"><CheckCircle2 className="w-3.5 h-3.5 text-[#3A5A40] shrink-0" /> 软件内已有但文件中不存在的企划将<span className="text-[#2D3A30]">完整保留</span>。</li>
+                           </ul>
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 gap-3">
-                        <button onClick={handleExecuteImport} className="py-5 bg-rose-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-rose-200 active:scale-95 transition-all">确认并全量载入</button>
-                        <button onClick={() => setIsConfirming(false)} className="py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest">返回修改</button>
+                        <button onClick={handleExecuteImport} className="py-5 bg-[#3A5A40] text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-forest-mist active:scale-95 transition-all flex items-center justify-center gap-2">
+                          开始智能合并导入
+                        </button>
+                        <button onClick={() => setIsConfirming(false)} className="py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-900 transition-colors">返回列表</button>
                       </div>
                     </div>
                   )}

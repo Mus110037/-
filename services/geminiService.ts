@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Order, Resource } from "../types";
 
@@ -85,15 +84,18 @@ export const parseMihuashiScreenshot = async (base64Image: string) => {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [
-        {
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: base64Image.split(',')[1] || base64Image
-          }
-        },
-        { text: prompt }
-      ],
+      // Fix: Ensure contents follows the { parts: [...] } structure for multimodal requests
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: base64Image.split(',')[1] || base64Image
+            }
+          },
+          { text: prompt }
+        ]
+      },
       config: {
         responseMimeType: "application/json",
         responseSchema: {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import MobileNav from './components/MobileNav';
@@ -12,7 +11,8 @@ import SettingsView from './components/SettingsView';
 import SocialShareModal from './components/SocialShareModal';
 import ImportModal from './components/ImportModal';
 import { Order, OrderStatus, DEFAULT_STAGES, DEFAULT_SOURCES, DEFAULT_ART_TYPES, DEFAULT_PERSON_COUNTS, SAMPLE_ORDERS, AppSettings } from './types';
-import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone, CheckCircle2, Zap, Wand2, Download } from 'lucide-react';
+// Added X to imports to fix 'Cannot find name X' error
+import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone, CheckCircle2, Zap, Wand2, Download, RefreshCw, X } from 'lucide-react';
 import { getSchedulingInsights } from './services/geminiService';
 import { format, differenceInDays } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -62,14 +62,11 @@ const App: React.FC = () => {
     loadInsights();
   }, [orders]);
 
-  // 全量设置更新与数据迁移逻辑
   const handleUpdateSettings = (newSettings: AppSettings) => {
-    // 如果修改了阶段名称或来源名称，需要同步更新现有订单中的字符串引用
     const updatedOrders = orders.map(order => {
       let updatedOrder = { ...order };
       let hasChanged = false;
 
-      // 1. 阶段名称迁移 (按索引匹配旧设置)
       const oldStageIdx = settings.stages.findIndex(s => s.name === order.progressStage);
       if (oldStageIdx !== -1 && newSettings.stages[oldStageIdx]) {
         const newStageName = newSettings.stages[oldStageIdx].name;
@@ -79,7 +76,6 @@ const App: React.FC = () => {
         }
       }
 
-      // 2. 渠道来源名称迁移
       const oldSourceIdx = settings.sources.findIndex(s => s.name === order.source);
       if (oldSourceIdx !== -1 && newSettings.sources[oldSourceIdx]) {
         const newSourceName = newSettings.sources[oldSourceIdx].name;
@@ -120,14 +116,56 @@ const App: React.FC = () => {
     setEditingOrder(null);
   };
 
-  const handleImportOrders = (newOrders: Order[], mode: 'append' | 'merge' | 'replace' = 'append') => {
+  /**
+   * 核心导入合并逻辑
+   */
+  const handleImportOrders = (newOrders: Order[], mode: 'append' | 'merge' | 'replace' = 'merge') => {
     if (mode === 'replace') {
       setOrders(newOrders);
       setMergeSummary({ updated: 0, added: newOrders.length, replaced: true });
+    } else if (mode === 'merge') {
+      let updatedCount = 0;
+      let addedCount = 0;
+      
+      // 使用 名称+日期 作为唯一键
+      // Fix: Explicitly type existingKeyMap to avoid 'unknown' type errors during merge
+      const existingKeyMap = new Map<string, Order>(orders.map(o => [`${o.title.trim()}-${o.deadline}`, o]));
+      const resultOrders = [...orders];
+
+      newOrders.forEach(newO => {
+        const key = `${newO.title.trim()}-${newO.deadline}`;
+        const existing = existingKeyMap.get(key);
+        
+        if (existing) {
+          // 智能合并：更新关键字段，保留 ID 和 初始创建时间
+          const idx = resultOrders.findIndex(o => o.id === existing.id);
+          if (idx !== -1) {
+            resultOrders[idx] = { 
+              ...existing, 
+              ...newO, 
+              id: existing.id, 
+              createdAt: existing.createdAt,
+              priority: existing.priority, // 保留本地设置的优先级
+              updatedAt: new Date().toISOString(),
+              version: (existing.version || 0) + 1
+            };
+            updatedCount++;
+          }
+        } else {
+          // 全新项：直接追加
+          resultOrders.push(newO);
+          addedCount++;
+        }
+      });
+
+      setOrders(resultOrders);
+      setMergeSummary({ updated: updatedCount, added: addedCount, replaced: false });
     } else {
       setOrders([...orders, ...newOrders]);
       setMergeSummary({ updated: 0, added: newOrders.length, replaced: false });
     }
+    
+    // 5秒后清除同步摘要
     setTimeout(() => setMergeSummary(null), 5000);
   };
 
@@ -173,6 +211,22 @@ const App: React.FC = () => {
           </div>
         </header>
 
+        {/* 导入结果反馈条 */}
+        {mergeSummary && (
+          <div className="mb-6 p-4 bg-[#2D3A30] text-white rounded-2xl flex items-center justify-between shadow-xl animate-in slide-in-from-top-4 duration-500">
+             <div className="flex items-center gap-3">
+               <div className="p-2 bg-emerald-500 rounded-lg"><RefreshCw className="w-4 h-4 text-white" /></div>
+               <div>
+                 <p className="text-[11px] font-black uppercase tracking-widest">智能合并成功</p>
+                 <p className="text-[9px] text-[#A3B18A] font-bold mt-0.5">
+                   {mergeSummary.replaced ? '全量替换了所有数据' : `更新了 ${mergeSummary.updated} 项已有企划，追加了 ${mergeSummary.added} 项新企划`}
+                 </p>
+               </div>
+             </div>
+             <button onClick={() => setMergeSummary(null)} className="text-[#A3B18A] hover:text-white transition-colors p-1"><X className="w-4 h-4" /></button>
+          </div>
+        )}
+
         {insights && (
           <div className="mb-8 p-5 bg-white border border-[#E2E8E4] rounded-2xl text-[#2D3A30] flex items-start gap-4 shadow-sm">
             <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-[#3A5A40]" />
@@ -201,7 +255,7 @@ const App: React.FC = () => {
       <CreateOrderModal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setEditingOrder(null); }} onSave={handleSaveOrder} onDelete={handleDeleteOrder} initialOrder={editingOrder} settings={settings} />
       <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={handleImportOrders} />
       <SocialShareModal isOpen={isSocialModalOpen} onClose={() => setIsSocialModalOpen(false)} orders={orders} />
-      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, 'replace')} />
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, 'merge')} />
     </div>
   );
 };
