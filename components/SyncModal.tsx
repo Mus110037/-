@@ -75,23 +75,25 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
     const finalToken = `ARTNEXUS:${encoded}`;
     
     navigator.clipboard.writeText(finalToken).then(() => {
-      alert("同步口令已存入剪贴板！\n\n请在另一台设备打开同步中心，点击“粘贴口令导入”即可完成同步。");
+      alert("同步口令已存入剪贴板！\n\n请在另一台设备点击“粘贴口令导入”并粘贴即可。");
     }).catch(err => {
-      // 备选方案：如果自动复制失败（某些浏览器限制），弹窗显示口令让用户手动复制
-      prompt("复制口令失败，请手动复制下方文本：", finalToken);
+      prompt("自动复制失败，请手动复制下方口令：", finalToken);
     });
   };
 
-  const handlePasteFromClipboard = () => {
-    const cleanValue = clipboardValue.trim();
-    
-    if (!cleanValue.includes('ARTNEXUS:')) {
-      alert("无效的口令格式：未找到 ARTNEXUS 前缀。请确保完整复制了生成的口令。");
+  const processImportToken = (token: string) => {
+    // 正则表达式：忽略大小写，允许前后有干扰文字，匹配 ARTNEXUS: 后面的 Base64 内容
+    const regex = /ARTNEXUS:([A-Za-z0-9+/=%\s\n\r]+)/i;
+    const match = token.match(regex);
+
+    if (!match || !match[1]) {
+      alert("无效的口令：未检测到 ArtNexus 核心数据。请确保完整复制了以 ARTNEXUS: 开头的代码。");
       return;
     }
 
     try {
-      const encodedPart = cleanValue.split('ARTNEXUS:')[1].trim();
+      // 进一步清洗：去除空格、换行等干扰
+      const encodedPart = match[1].replace(/[\s\n\r]/g, '');
       const decodedData = safeAtob(encodedPart);
       
       if (!decodedData) {
@@ -105,12 +107,28 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
       }
 
       onImportOrders?.(parsedOrders, true);
-      showToastAndClose("口令同步成功！");
+      showToastAndClose("数据融合成功！");
       setClipboardValue('');
       setShowClipboardInput(false);
     } catch (e) {
       console.error("Sync Error:", e);
-      alert("解析失败：口令内容可能已损坏或复制不完整。请尝试重新生成口令。");
+      alert("解析失败：口令可能已过期或复制不完整。请重新生成口令尝试。");
+    }
+  };
+
+  const handlePasteFromClipboard = () => {
+    processImportToken(clipboardValue);
+  };
+
+  const handleQuickReadClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setClipboardValue(text);
+        processImportToken(text);
+      }
+    } catch (err) {
+      alert("浏览器拒绝了剪贴板访问权限，请手动粘贴到输入框。");
     }
   };
 
@@ -155,19 +173,23 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
             
             {showClipboardInput && (
               <div className="p-4 bg-[#F2F4F0] rounded-2xl space-y-3 animate-in slide-in-from-top-2">
+                <div className="flex justify-between items-center px-1">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">导入输入框</span>
+                  <button onClick={handleQuickReadClipboard} className="text-[9px] font-bold text-amber-600 uppercase hover:underline">一键读取剪贴板</button>
+                </div>
                 <textarea 
                   className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[10px] font-medium focus:border-amber-500 outline-none" 
                   rows={3} 
-                  placeholder="在此粘贴另一台设备生成的 ARTNEXUS:... 开头的口令"
+                  placeholder="在此粘贴 ARTNEXUS:... 开头的口令内容"
                   value={clipboardValue}
                   onChange={e => setClipboardValue(e.target.value)}
                 />
                 <button 
                   onClick={handlePasteFromClipboard} 
                   disabled={!clipboardValue.trim()}
-                  className="w-full py-3 bg-amber-500 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest disabled:opacity-50"
+                  className="w-full py-3 bg-amber-500 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest disabled:opacity-50 shadow-lg active:scale-[0.98] transition-transform"
                 >
-                  开始融合数据
+                  智能识别并融合
                 </button>
               </div>
             )}
@@ -216,14 +238,16 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
             </div>
           </div>
 
-          {/* 清理建议卡片 */}
+          {/* 小贴士 */}
           <div className="p-5 bg-slate-50 border border-slate-100 rounded-3xl space-y-3">
             <div className="flex items-center gap-2 text-slate-400">
               <Info className="w-4 h-4" />
-              <p className="text-[10px] font-black uppercase tracking-wider">小贴士</p>
+              <p className="text-[10px] font-black uppercase tracking-wider">为什么我的口令无效？</p>
             </div>
             <p className="text-[10px] leading-relaxed text-slate-500">
-              <b>同步口令</b> 非常适合临时跨设备传输（如 iPad 到 iPhone）。<b>文件备份</b> 则适合长期保存数据，建议每周导出一份存入 iCloud。
+              1. 确保在 A 设备点击了“生成”并看到了成功提示。<br/>
+              2. 确保在 B 设备粘贴时，内容包含 <b>ARTNEXUS:</b> 字符。<br/>
+              3. 若依然失败，请使用“方案 B”发送文件同步。
             </p>
           </div>
         </div>
