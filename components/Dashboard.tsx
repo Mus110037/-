@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Order, STAGE_PROGRESS_MAP, AppSettings } from '../types';
+// STAGE_PROGRESS_MAP was removed from types.ts, removing unused import here
+import { Order, AppSettings } from '../types';
 import { Wallet, Calendar as CalendarIcon, Sparkles, Star, GripVertical, LayoutGrid, Zap } from 'lucide-react';
 import { isWithinInterval, addDays, parseISO, format } from 'date-fns';
 import { zhCN } from 'date-fns/locale';

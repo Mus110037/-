@@ -9,18 +9,19 @@ import FinanceView from './components/FinanceView';
 import CreateOrderModal from './components/CreateOrderModal';
 import SyncModal from './components/SyncModal';
 import SettingsView from './components/SettingsView';
-import { Order, OrderStatus, DEFAULT_STAGES, DEFAULT_SOURCES, DEFAULT_ART_TYPES, DEFAULT_PERSON_COUNTS, AppSettings } from './types';
-import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Palette } from 'lucide-react';
+import { Order, OrderStatus, DEFAULT_STAGES, DEFAULT_SOURCES, DEFAULT_ART_TYPES, DEFAULT_PERSON_COUNTS, SAMPLE_ORDERS, AppSettings } from './types';
+import { Sparkles, BrainCircuit, Plus, FileSpreadsheet } from 'lucide-react';
 import { getSchedulingInsights } from './services/geminiService';
 
-const STORAGE_KEY = 'artnexus_orders_data_v4';
-const SETTINGS_KEY = 'artnexus_app_settings_v4';
+const STORAGE_KEY = 'artnexus_orders_v5';
+const SETTINGS_KEY = 'artnexus_settings_v5';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
+    // 如果没有数据，载入示例数据
+    return saved ? JSON.parse(saved) : SAMPLE_ORDERS;
   });
   const [settings, setSettings] = useState<AppSettings>(() => {
     const saved = localStorage.getItem(SETTINGS_KEY);
@@ -79,31 +80,24 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': 
-        return <Dashboard 
-          orders={orders} 
-          priorityOrderIds={priorityOrderIds} 
-          onUpdatePriorityIds={setPriorityOrderIds}
-          settings={settings}
-        />;
+        return <Dashboard orders={orders} priorityOrderIds={priorityOrderIds} onUpdatePriorityIds={setPriorityOrderIds} settings={settings} />;
       case 'calendar': return <CalendarView orders={orders} onEditOrder={handleStartEdit} settings={settings} />;
       case 'orders': return <OrderList orders={orders} onEditOrder={handleStartEdit} settings={settings} />;
       case 'finance': return <FinanceView orders={orders} settings={settings} />;
       case 'settings': return <SettingsView settings={settings} setSettings={setSettings} />;
       case 'ai-assistant':
         return (
-          <div className="bg-white rounded-[3rem] p-12 border border-slate-100 max-w-2xl mx-auto mt-4 text-center shadow-sm">
-            <div className="bg-sky-50 w-24 h-24 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner">
-              <BrainCircuit className="w-12 h-12 text-sky-300" />
+          <div className="bg-white rounded-[2rem] p-12 border border-slate-200 max-w-2xl mx-auto mt-4 text-center">
+            <div className="bg-slate-900 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl">
+              <BrainCircuit className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-2xl font-black mb-4 text-slate-800 tracking-tight">AI 排单管家</h2>
-            <p className="text-xs text-slate-400 mb-10 leading-relaxed font-bold uppercase tracking-widest">
-              分析创作周期，优化交付方案
-            </p>
+            <h2 className="text-xl font-bold mb-4 text-slate-900 tracking-tight uppercase">AI 排单管家</h2>
+            <p className="text-[11px] text-slate-500 mb-10 leading-relaxed font-bold uppercase tracking-widest">分析创作周期，优化交付方案</p>
             <button 
               onClick={() => getSchedulingInsights(orders).then(setInsights)}
-              className="w-full bg-[#BEE3F8] text-sky-800 py-4 rounded-2xl font-black hover:bg-sky-200 transition-all shadow-lg shadow-sky-50"
+              className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg"
             >
-              <Sparkles className="w-5 h-5 inline mr-2" /> 生成智能见解
+              <Sparkles className="w-4 h-4 inline mr-2" /> 运行智能分析
             </button>
           </div>
         );
@@ -112,42 +106,37 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#FDFDFD]">
+    <div className="flex min-h-screen bg-slate-50">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-1 p-4 md:p-10 pb-24 lg:pb-10 overflow-y-auto custom-scrollbar">
-        <header className="flex items-center justify-between mb-10">
+        <header className="flex items-center justify-between mb-8">
           <div className="min-w-0">
-            <h1 className="text-2xl md:text-3xl font-black text-slate-800 truncate tracking-tight uppercase">
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 truncate tracking-tight uppercase">
               {activeTab === 'dashboard' ? 'Overview' : 
                activeTab === 'calendar' ? 'Schedule' : 
                activeTab === 'orders' ? 'Projects' : 
                activeTab === 'finance' ? 'Finance' : 
                activeTab === 'settings' ? 'Workspace' : 'AI Assistant'}
             </h1>
-            <div className="flex items-center gap-2 mt-1">
-               <span className="w-2 h-2 rounded-full bg-sky-200 animate-pulse"></span>
-               <p className="text-[10px] text-slate-300 uppercase tracking-[0.2em] font-black">Creator's Personal Studio</p>
-            </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            <button onClick={() => setIsSyncModalOpen(true)} className="p-3.5 bg-white text-slate-300 border border-slate-100 rounded-2xl hover:text-emerald-300 hover:bg-emerald-50 transition-all shadow-sm">
-              <FileSpreadsheet className="w-5 h-5" /> 
+          <div className="flex items-center gap-2">
+            <button onClick={() => setIsSyncModalOpen(true)} className="p-3 bg-white text-slate-400 border border-slate-200 rounded-xl hover:text-slate-900 transition-all shadow-sm">
+              <FileSpreadsheet className="w-4 h-4" /> 
             </button>
-            <button onClick={() => setIsCreateModalOpen(true)} className="p-3.5 bg-[#BEE3F8] text-sky-800 rounded-2xl flex items-center gap-2 hover:bg-sky-200 transition-all shadow-lg shadow-sky-100/50">
-              <Plus className="w-5 h-5" /> 
-              <span className="hidden md:inline font-black text-[11px] uppercase tracking-widest">录入企划</span>
+            <button onClick={() => setIsCreateModalOpen(true)} className="p-3 bg-slate-900 text-white rounded-xl flex items-center gap-2 hover:bg-slate-800 transition-all shadow-md">
+              <Plus className="w-4 h-4" /> 
+              <span className="hidden md:inline font-bold text-[11px] uppercase tracking-widest">录入企划</span>
             </button>
           </div>
         </header>
 
         {insights && (
-          <div className="mb-10 p-6 bg-white border border-sky-100 rounded-[2.5rem] text-sky-800 flex items-start gap-4 shadow-sm relative overflow-hidden">
-            <Sparkles className="w-5 h-5 mt-1 flex-shrink-0 text-sky-300" />
-            <p className="text-[12px] font-bold leading-relaxed tracking-wide z-10">{insights}</p>
-            <div className="absolute top-0 right-0 w-48 h-48 bg-sky-50 rounded-full blur-3xl -mr-20 -mt-20"></div>
+          <div className="mb-8 p-5 bg-white border border-slate-200 rounded-2xl text-slate-900 flex items-start gap-4 shadow-sm">
+            <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-slate-900" />
+            <p className="text-[11px] font-bold leading-relaxed tracking-wide">{insights}</p>
           </div>
         )}
 
