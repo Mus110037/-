@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart as RePieChart, Pie, AreaChart, Area } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart as RePieChart, Pie, AreaChart, Area, Legend } from 'recharts';
 import { Order, AppSettings } from '../types';
-import { DollarSign, TrendingUp, LayoutGrid, Activity } from 'lucide-react';
+import { DollarSign, TrendingUp, LayoutGrid, Activity, Clock } from 'lucide-react';
 import { format, eachMonthOfInterval, endOfYear } from 'date-fns';
 
 interface FinanceViewProps {
@@ -10,13 +10,12 @@ interface FinanceViewProps {
   settings: AppSettings;
 }
 
-type FinanceModule = 'projected' | 'actual' | 'rate' | 'distChart' | 'trendChart' | 'typeChart';
+type FinanceModule = 'projected' | 'actual' | 'rate' | 'duration' | 'distChart' | 'trendChart' | 'typeChart';
 
 const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
-  const [isEditing, setIsEditing] = useState(false);
   const [modules] = useState<FinanceModule[]>(() => {
     const saved = localStorage.getItem('artnexus_finance_v5');
-    return saved ? JSON.parse(saved) : ['projected', 'actual', 'rate', 'distChart', 'trendChart', 'typeChart'];
+    return saved ? JSON.parse(saved) : ['projected', 'actual', 'rate', 'duration', 'distChart', 'trendChart', 'typeChart'];
   });
 
   const getSourceConfig = (sourceName: string) => {
@@ -36,6 +35,11 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
   const projectedRevenue = orders.reduce((sum, o) => sum + calculateActual(o), 0);
   const actualRevenue = orders.filter(o => getProgress(o) === 100).reduce((sum, o) => sum + calculateActual(o), 0);
   const completionRate = projectedRevenue > 0 ? (actualRevenue / projectedRevenue) * 100 : 0;
+  
+  // 累计创作工时 (小时)
+  const totalActualDuration = orders
+    .filter(o => getProgress(o) === 100 && o.actualDuration !== undefined)
+    .reduce((sum, o) => sum + (o.actualDuration || 0), 0);
 
   const computeTrendData = () => {
     const now = new Date();
@@ -45,8 +49,11 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
     return months.map(m => {
       const monthStr = format(m, 'yyyy-MM');
       const monthOrders = orders.filter(o => o.deadline.startsWith(monthStr));
-      const monthActual = monthOrders.filter(o => getProgress(o) === 100).reduce((sum, o) => sum + calculateActual(o), 0);
-      return { name: format(m, 'M月'), value: monthActual };
+      const monthProjected = monthOrders.reduce((sum, o) => sum + calculateActual(o), 0);
+      return { 
+        name: format(m, 'M月'), 
+        projected: monthProjected
+      };
     });
   };
 
@@ -55,11 +62,12 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
   const renderModule = (type: FinanceModule) => {
     const baseClass = `bg-white rounded-[2.5rem] border transition-all duration-300 shadow-sm relative overflow-hidden border-[#E2E8E4]`;
     
-    if (type === 'projected' || type === 'actual' || type === 'rate') {
+    if (type === 'projected' || type === 'actual' || type === 'rate' || type === 'duration') {
       const config = {
         projected: { icon: TrendingUp, color: 'text-[#4F6D58] bg-[#F2F4F0]', label: '预计总额 (已扣手续费)', val: `¥${projectedRevenue.toLocaleString()}` },
         actual: { icon: DollarSign, color: 'text-white bg-[#3A5A40]', label: '实际入账总额', val: `¥${actualRevenue.toLocaleString()}` },
         rate: { icon: Activity, color: 'text-[#3A5A40] bg-[#EDF1EE]', label: '款项转化率', val: `${completionRate.toFixed(1)}%` },
+        duration: { icon: Clock, color: 'text-[#2D3A30] bg-[#DAD7CD]', label: '累计创作工时', val: `${totalActualDuration.toFixed(1)} H` },
       }[type];
       
       return (
@@ -85,20 +93,37 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
       const FOREST_COLORS = ['#2D3A30', '#3A5A40', '#4F6D58', '#588157', '#A3B18A', '#DAD7CD'];
 
       return (
-        <div key="typeChart" className={`${baseClass} p-10 lg:col-span-1`}>
-          <div className="flex items-center gap-3 mb-10">
+        <div key="typeChart" className={`${baseClass} p-8 lg:col-span-1 min-h-[450px]`}>
+          <div className="flex items-center gap-3 mb-6">
             <span className="w-5 h-5 text-[#3A5A40]">●</span>
             <h3 className="text-sm font-bold text-[#2D3A30] uppercase tracking-tight">稿件分类占比</h3>
           </div>
-          <div className="h-64">
+          <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <RePieChart>
-                <Pie data={data} innerRadius={60} outerRadius={85} paddingAngle={5} dataKey="value">
+              <RePieChart margin={{ top: 10, right: 60, left: 60, bottom: 10 }}>
+                <Pie 
+                  data={data} 
+                  innerRadius={35} 
+                  outerRadius={50} 
+                  paddingAngle={5} 
+                  dataKey="value"
+                  label={({ name, value }) => `${name}: ¥${value.toLocaleString()}`}
+                  labelLine={{ stroke: '#D1D9D3', strokeWidth: 1 }}
+                  fontSize={10}
+                  fontWeight="bold"
+                >
                   {data.map((_, index) => <Cell key={index} fill={FOREST_COLORS[index % FOREST_COLORS.length]} stroke="none" />)}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{borderRadius: '1.5rem', border: 'none', fontWeight: 'bold', backgroundColor: '#F2F4F0'}}
+                  contentStyle={{borderRadius: '1.5rem', border: 'none', fontWeight: 'bold', backgroundColor: '#F2F4F0', fontSize: '12px'}}
                   itemStyle={{color: '#2D3A30'}}
+                  formatter={(value: number) => [`¥${value.toLocaleString()}`, '预计收入']}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36} 
+                  iconSize={8}
+                  wrapperStyle={{fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', paddingTop: '20px'}} 
                 />
               </RePieChart>
             </ResponsiveContainer>
@@ -109,11 +134,11 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
 
     if (type === 'distChart') {
       const data = [
-        { name: '预计', value: projectedRevenue },
-        { name: '实收', value: actualRevenue }
+        { name: '总预计', value: projectedRevenue },
+        { name: '总实收', value: actualRevenue }
       ];
       return (
-        <div key={type} className={`${baseClass} p-10 lg:col-span-1 min-h-[400px]`}>
+        <div key={type} className={`${baseClass} p-8 lg:col-span-1 min-h-[450px]`}>
            <div className="flex items-center gap-3 mb-10 text-[#2D3A30] uppercase font-bold text-sm">
              <LayoutGrid className="w-5 h-5 text-[#3A5A40]"/>
              收支对比统计
@@ -121,7 +146,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
            <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data}>
-                  <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#4F6D58'}} />
+                  <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#4F6D58', fontWeight: 'bold'}} />
                   <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#4F6D58'}} />
                   <Tooltip cursor={{fill: '#F2F4F0', opacity: 0.5}} contentStyle={{borderRadius: '1.5rem', border: 'none', backgroundColor: '#F2F4F0'}} />
                   <Bar dataKey="value" radius={[15, 15, 0, 0]} barSize={60}>
@@ -138,10 +163,10 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
 
     if (type === 'trendChart') {
       return (
-        <div key={type} className={`${baseClass} p-10 lg:col-span-2 min-h-[400px]`}>
+        <div key={type} className={`${baseClass} p-8 lg:col-span-2 min-h-[450px]`}>
            <div className="flex items-center gap-3 mb-10 text-[#2D3A30] uppercase font-bold text-sm">
              <TrendingUp className="w-5 h-5 text-[#3A5A40]"/>
-             月度财务趋势
+             预计月度收入趋势 (按截稿日期)
            </div>
            <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -152,10 +177,13 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
                       <stop offset="95%" stopColor="#3A5A40" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#4F6D58'}} />
+                  <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#4F6D58', fontWeight: 'bold'}} />
                   <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{fill: '#4F6D58'}} />
-                  <Tooltip contentStyle={{borderRadius: '1.5rem', border: 'none', backgroundColor: '#F2F4F0'}} />
-                  <Area type="monotone" dataKey="value" stroke="#3A5A40" strokeWidth={4} fillOpacity={1} fill="url(#colorTrend)" />
+                  <Tooltip 
+                    contentStyle={{borderRadius: '1.5rem', border: 'none', backgroundColor: '#F2F4F0'}}
+                    formatter={(value: number) => [`¥${value.toLocaleString()}`, '预计月收入']}
+                  />
+                  <Area type="monotone" dataKey="projected" stroke="#3A5A40" strokeWidth={4} fillOpacity={1} fill="url(#colorTrend)" />
                 </AreaChart>
               </ResponsiveContainer>
            </div>

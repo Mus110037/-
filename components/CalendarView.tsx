@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { format, endOfMonth, eachDayOfInterval, isSameDay, addMonths } from 'date-fns';
 import { zhCN } from 'date-fns/locale/zh-CN';
 import { Order, AppSettings } from '../types';
-import { ChevronLeft, ChevronRight, Smartphone, Wallet, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Smartphone, Wallet, CheckCircle2, Clock } from 'lucide-react';
 
 interface CalendarViewProps {
   orders: Order[];
@@ -32,23 +32,29 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
   };
 
   const currentMonthOrders = orders.filter(o => format(new Date(o.deadline.replace(/-/g, '/')), 'yyyy-MM') === format(currentDate, 'yyyy-MM'));
-  const monthProjected = currentMonthOrders.reduce((sum, o) => sum + o.totalPrice, 0);
+  
+  // 修改为：预计本月实收 (已扣去手续费)
+  const monthProjected = currentMonthOrders.reduce((sum, o) => sum + calculateActual(o), 0);
+  
   const monthActual = currentMonthOrders.filter(o => getStageConfig(o.progressStage).progress === 100).reduce((sum, o) => sum + calculateActual(o), 0);
+  
+  // 计算本月累计耗时 (小时)
+  const monthTotalDuration = currentMonthOrders
+    .filter(o => getStageConfig(o.progressStage).progress === 100 && o.actualDuration !== undefined)
+    .reduce((sum, o) => sum + (o.actualDuration || 0), 0);
 
   const getEventStyle = (order: Order) => {
     const stage = getStageConfig(order.progressStage);
     const isP0 = order.priority === '高';
-    
-    // 强制使用超高对比度的文字颜色
     const textColor = '#1B241D'; 
 
     return {
       style: { 
-        backgroundColor: `${stage.color}18`, // 极淡的背景
+        backgroundColor: `${stage.color}18`,
         borderColor: `${stage.color}50`, 
         color: textColor,
         borderLeftColor: stage.color, 
-        borderLeftWidth: '4px' // 加宽侧边条
+        borderLeftWidth: '4px'
       },
       className: `text-[10px] md:text-[11px] px-2 py-1.5 md:py-2 rounded-md border truncate cursor-pointer transition-all mb-1 font-black hover:shadow-lg leading-tight flex items-center shadow-sm ${isP0 ? 'ring-1 ring-red-600/30' : ''}`
     };
@@ -57,13 +63,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
   return (
     <div className="space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-700 pb-10">
       {/* 当月概览卡片 */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3 md:gap-4">
           <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 shrink-0">
             <Wallet className="w-4 h-4 md:w-5 md:h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">本月预收</p>
+            <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">本月预收 (净)</p>
             <p className="text-sm md:text-base font-black text-slate-900 truncate">¥{monthProjected.toLocaleString()}</p>
           </div>
         </div>
@@ -72,8 +78,17 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
             <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">本月实收</p>
+            <p className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">本月已入账</p>
             <p className="text-sm md:text-base font-black text-slate-900 truncate">¥{monthActual.toLocaleString()}</p>
+          </div>
+        </div>
+        <div className="bg-[#EDF1EE] p-4 md:p-5 rounded-2xl border border-[#D1D9D3] shadow-sm flex items-center gap-3 md:gap-4 col-span-2 lg:col-span-1">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-xl flex items-center justify-center text-[#3A5A40] shrink-0 shadow-sm">
+            <Clock className="w-4 h-4 md:w-5 md:h-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[8px] md:text-[9px] font-bold text-[#4F6D58] uppercase tracking-widest mb-0.5">本月累计工时</p>
+            <p className="text-sm md:text-base font-black text-[#2D3A30] truncate">{monthTotalDuration.toFixed(1)} <span className="text-[10px]">HOURS</span></p>
           </div>
         </div>
       </div>

@@ -34,11 +34,12 @@ export interface Order {
   id: string;
   title: string;
   priority: '高' | '中' | '低';
-  duration: number;
+  duration: number; // 预计小时
+  actualDuration?: number; // 实际所用小时
   deadline: string;
   createdAt: string;
   updatedAt: string;
-  version: number; // 新增：每次修改+1，解决多设备同步时的“谁听谁的”问题
+  version: number;
   status: OrderStatus;
   progressStage: string;
   commissionType: CommissionType;
@@ -52,11 +53,11 @@ export interface Order {
 export const DEFAULT_STAGES: StageConfig[] = [
   { name: '未开始', progress: 0, color: '#94A3B8' },
   { name: '构图/动态', progress: 15, color: '#3B82F6' },
-  { name: '色稿', progress: 30, color: '#6366F1' },
-  { name: '草稿', progress: 50, color: '#A855F7' },
-  { name: '线稿', progress: 70, color: '#10B981' },
-  { name: '细化', progress: 90, color: '#F43F5E' },
-  { name: '成稿', progress: 100, color: '#1E293B' }
+  { name: '色稿', progress: 30, color: '#5856D6' },
+  { name: '草稿', progress: 50, color: '#AF52DE' },
+  { name: '线稿', progress: 70, color: '#34C759' },
+  { name: '细化', progress: 90, color: '#FF2D55' },
+  { name: '成稿', progress: 100, color: '#1C1C1E' }
 ];
 
 export const DEFAULT_SOURCES: SourceConfig[] = [
@@ -75,13 +76,14 @@ export const SAMPLE_ORDERS: Order[] = [
     id: 'sample-1',
     title: '示例：异世界美少女全身',
     priority: '高',
-    duration: 7,
+    duration: 50,
+    actualDuration: 42.5,
     deadline: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
     createdAt: new Date().toISOString().split('T')[0],
     updatedAt: new Date().toISOString(),
     version: 1,
-    status: OrderStatus.PENDING,
-    progressStage: '草稿',
+    status: OrderStatus.COMPLETED,
+    progressStage: '成稿',
     commissionType: '商用',
     personCount: '单人',
     artType: '全身',

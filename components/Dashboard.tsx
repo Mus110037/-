@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Order, AppSettings } from '../types';
-import { Wallet, Calendar as CalendarIcon, Zap, GripVertical } from 'lucide-react';
+import { Wallet, Calendar as CalendarIcon, Zap, GripVertical, Tag, Briefcase, User, Users, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale/zh-CN';
 
@@ -9,12 +9,13 @@ interface DashboardProps {
   orders: Order[];
   priorityOrderIds: string[];
   onUpdatePriorityIds: (ids: string[]) => void;
+  onEditOrder: (order: Order) => void;
   settings: AppSettings;
 }
 
 type SectionType = 'upcoming' | 'stats' | 'priority';
 
-const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdatePriorityIds, settings }) => {
+const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdatePriorityIds, onEditOrder, settings }) => {
   const [isManagingPriority, setIsManagingPriority] = useState(false);
   const [draggedPriorityIdx, setDraggedPriorityIdx] = useState<number | null>(null);
   const [sectionOrder] = useState<SectionType[]>(() => {
@@ -98,26 +99,34 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                     const stage = getStageConfig(o);
                     const deadlineDate = new Date(o.deadline.replace(/-/g, '/'));
                     return (
-                      <div key={o.id} className="flex items-center gap-4 p-4 hover:bg-[#F2F4F0] rounded-2xl transition-all border border-transparent hover:border-[#D1D9D3]">
-                        {/* 保持一致的日期徽章 */}
-                        <div className="flex flex-col items-center justify-center w-12 h-12 bg-[#2D3A30] rounded-2xl shrink-0 shadow-lg border border-white/5">
-                          <span className="text-[16px] font-black text-white leading-none tracking-tighter">
-                            {format(deadlineDate, 'dd')}
-                          </span>
-                          <span className="text-[9px] font-bold text-[#A3B18A] leading-none mt-1.5 uppercase tracking-widest">
-                            {format(deadlineDate, 'MMM', { locale: zhCN })}
-                          </span>
+                      <div key={o.id} onClick={() => onEditOrder(o)} className="flex items-center gap-4 p-4 hover:bg-[#F2F4F0] rounded-2xl transition-all border border-transparent hover:border-[#D1D9D3] cursor-pointer group">
+                        <div className="flex flex-col items-center justify-center w-12 h-12 bg-[#2D3A30] rounded-2xl shrink-0 shadow-lg border border-white/5 transition-transform group-hover:scale-105">
+                          <span className="text-[16px] font-black text-white leading-none tracking-tighter">{format(deadlineDate, 'dd')}</span>
+                          <span className="text-[9px] font-bold text-[#A3B18A] leading-none mt-1.5 uppercase tracking-widest">{format(deadlineDate, 'MMM', { locale: zhCN })}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <h4 className="font-bold text-[#2D3A30] truncate text-[12px]">{o.title}</h4>
-                            {o.priority === '高' && <Zap className="w-3 h-3 text-[#B5838D] fill-[#B5838D]" />}
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-bold text-[#2D3A30] truncate text-[12px] group-hover:text-[#3A5A40] transition-colors">{o.title}</h4>
+                            {o.priority === '高' && <Zap className="w-3 h-3 text-red-600 fill-red-600" />}
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1 h-1.5 bg-[#E2E8E4] rounded-full overflow-hidden">
-                              <div className="h-full transition-all duration-700" style={{ width: `${stage.progress}%`, backgroundColor: '#4F6D58' }} />
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* 核心进度条 - 颜色关联 stage.color */}
+                            <div className="w-20 h-2 bg-[#E2E8E4] rounded-full overflow-hidden shrink-0 border border-slate-200">
+                              <div className="h-full transition-all duration-700" style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} />
                             </div>
-                            <span className="text-[9px] font-bold text-[#4F6D58]">{stage.progress}%</span>
+                            <span className="px-2 py-0.5 bg-[#EDF1EE] text-[#3A5A40] text-[8px] font-black rounded-lg border border-[#D1D9D3] uppercase tracking-tighter">
+                              {stage.progress}%
+                            </span>
+                            {/* 性质标签 */}
+                            <span className="px-2 py-0.5 bg-white border border-slate-200 rounded-lg text-[8px] font-bold text-slate-500 flex items-center gap-1">
+                              {o.commissionType === '商用' ? <Briefcase className="w-2 h-2 text-amber-500" /> : <User className="w-2 h-2 text-blue-500" />}
+                              {o.commissionType?.substring(0, 1)}
+                            </span>
+                            {/* 分类 */}
+                            <span className="px-2 py-0.5 bg-white border border-slate-200 rounded-lg text-[8px] font-bold text-slate-500 flex items-center gap-1">
+                              <Tag className="w-2 h-2" />
+                              {o.artType}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -159,6 +168,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                       <div 
                         key={o.id} 
                         draggable
+                        onClick={() => onEditOrder(o)}
                         onDragStart={() => handlePriorityDragStart(idx)}
                         onDragOver={(e) => handlePriorityDragOver(e, idx)}
                         onDragEnd={() => setDraggedPriorityIdx(null)}
@@ -168,14 +178,16 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                           <GripVertical className="w-3.5 h-3.5 text-[#D1D9D3]" />
                         </div>
                         <div className="flex justify-between items-start mb-4 pl-2">
-                           <h4 className="font-bold text-[#2D3A30] text-sm truncate w-2/3">{o.title}</h4>
-                           <span className="px-2 py-1 bg-[#4F6D58] text-white text-[8px] font-bold rounded-lg shrink-0 uppercase tracking-tighter">Rank {idx + 1}</span>
+                           <h4 className="font-bold text-[#2D3A30] text-[12px] truncate w-2/3 group-hover:text-[#3A5A40] transition-colors">{o.title}</h4>
+                           <span className="px-2 py-1 bg-[#4F6D58] text-white text-[8px] font-bold rounded-lg shrink-0 uppercase tracking-tighter shadow-sm">P{idx + 1}</span>
                         </div>
-                        <div className="flex items-center gap-4 pl-2">
-                           <div className="flex-1 h-2 bg-[#F2F4F0] rounded-full overflow-hidden">
-                              <div className="h-full transition-all" style={{ width: `${stage.progress}%`, backgroundColor: '#3A5A40' }}></div>
+                        <div className="flex items-center gap-3 pl-2">
+                           {/* 进度条颜色关联 stage.color */}
+                           <div className="w-16 h-2 bg-[#F2F4F0] rounded-full overflow-hidden border border-slate-100 shrink-0">
+                              <div className="h-full transition-all" style={{ width: `${stage.progress}%`, backgroundColor: stage.color }}></div>
                            </div>
-                           <span className="text-[10px] font-bold text-[#4F6D58]">{stage.progress}%</span>
+                           <span className="text-[10px] font-black text-[#4F6D58]">{stage.progress}%</span>
+                           <span className="ml-auto text-[10px] font-black text-slate-900">¥{o.totalPrice.toLocaleString()}</span>
                         </div>
                       </div>
                     );

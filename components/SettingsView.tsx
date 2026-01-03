@@ -8,14 +8,30 @@ interface SettingsViewProps {
   setSettings: (s: AppSettings) => void;
 }
 
-const PRESET_COLORS = ['#94A3B8', '#3B82F6', '#6366F1', '#A855F7', '#10B981', '#F43F5E', '#1E293B'];
+// 模拟 Apple 系统配色方案：鲜亮色系 & 沉稳深色
+const PRESET_COLORS = [
+  '#8E8E93', // Gray
+  '#007AFF', // Blue
+  '#5856D6', // Indigo
+  '#AF52DE', // Purple
+  '#34C759', // Green
+  '#FF2D55', // Pink
+  '#1C1C1E', // Dark
+  '#FF9500', // Orange
+  '#FF3B30', // Red
+  '#5AC8FA', // Teal
+  '#FFCC00', // Yellow
+  '#A3B18A', // Sage
+  '#3A5A40', // Forest
+  '#2D3A30'  // Deep
+];
 
 const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings }) => {
   const [localSettings, setLocalSettings] = useState<AppSettings>(settings);
 
   const handleSave = () => {
     setSettings(localSettings);
-    alert('工作区设置已更新！系统将根据新费率重新计算实收。');
+    alert('保存成功！\n\n已有的企划订单将自动应用新费率、颜色及名称变更。');
   };
 
   const removeItem = (key: 'artTypes' | 'personCounts', index: number) => {
@@ -33,36 +49,51 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings }) =>
               <LayoutGrid className="w-4 h-4 md:w-5 md:h-5 text-slate-900" />
               <h3 className="text-base md:text-lg font-bold text-slate-900 tracking-tight uppercase">创作流阶段</h3>
             </div>
-            <button onClick={() => setLocalSettings({...localSettings, stages: [...localSettings.stages, { name: '新阶段', progress: 50, color: '#94A3B8' }]})} className="p-2 bg-slate-50 text-slate-900 rounded-xl hover:bg-slate-100 border border-slate-200 transition-all">
+            <button onClick={() => setLocalSettings({...localSettings, stages: [...localSettings.stages, { name: '新阶段', progress: 50, color: '#8E8E93' }]})} className="p-2 bg-slate-50 text-slate-900 rounded-xl hover:bg-slate-100 border border-slate-200 transition-all">
               <Plus className="w-4 h-4" />
             </button>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {localSettings.stages.map((stage, idx) => (
-              <div key={idx} className="p-3 md:p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="flex items-center gap-3 md:gap-4 mb-3">
-                  <input className="bg-transparent font-bold text-xs md:text-sm text-slate-900 outline-none flex-1 min-w-0" value={stage.name} onChange={e => {
+              <div key={idx} className="p-4 md:p-5 bg-white rounded-2xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
+                <div className="flex items-center justify-between gap-4 mb-5">
+                  <input className="bg-transparent font-black text-sm text-slate-900 outline-none flex-1 min-w-0" value={stage.name} onChange={e => {
                     const newStages = [...localSettings.stages];
                     newStages[idx].name = e.target.value;
                     setLocalSettings({ ...localSettings, stages: newStages });
-                  }} />
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <input type="number" className="w-10 md:w-12 bg-white border border-slate-200 rounded-lg text-[10px] md:text-xs font-bold p-1 text-center text-slate-900" value={stage.progress} onChange={e => {
-                      const newStages = [...localSettings.stages];
-                      newStages[idx].progress = parseInt(e.target.value) || 0;
-                      setLocalSettings({ ...localSettings, stages: newStages });
-                    }} />
-                    <span className="text-[9px] md:text-[10px] font-bold text-slate-400">%</span>
-                    <button onClick={() => setLocalSettings({...localSettings, stages: localSettings.stages.filter((_, i) => i !== idx)})} className="p-1.5 text-slate-300 hover:text-red-600 transition-all"><Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
+                  }} placeholder="阶段名称" />
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
+                      <input type="number" className="w-8 bg-transparent text-xs font-black p-0 text-center text-slate-900 outline-none" value={stage.progress} onChange={e => {
+                        const newStages = [...localSettings.stages];
+                        newStages[idx].progress = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                        setLocalSettings({ ...localSettings, stages: newStages });
+                      }} />
+                      <span className="text-[10px] font-black text-slate-400">%</span>
+                    </div>
+                    <button onClick={() => setLocalSettings({...localSettings, stages: localSettings.stages.filter((_, i) => i !== idx)})} className="p-1.5 text-slate-300 hover:text-red-600 transition-all"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 md:gap-3">
                   {PRESET_COLORS.map(color => (
-                    <button key={color} onClick={() => {
-                      const newStages = [...localSettings.stages];
-                      newStages[idx].color = color;
-                      setLocalSettings({ ...localSettings, stages: newStages });
-                    }} className={`w-5 h-5 md:w-6 md:h-6 rounded-full border-2 transition-all ${stage.color === color ? 'border-slate-900 scale-110' : 'border-white'}`} style={{ backgroundColor: color }} />
+                    <button 
+                      key={color} 
+                      onClick={() => {
+                        const newStages = [...localSettings.stages];
+                        newStages[idx].color = color;
+                        setLocalSettings({ ...localSettings, stages: newStages });
+                      }} 
+                      className={`w-6 h-6 md:w-7 md:h-7 rounded-full border transition-all relative ${
+                        stage.color === color 
+                          ? 'scale-110 shadow-lg' 
+                          : 'border-white hover:scale-110'
+                      }`} 
+                      style={{ 
+                        backgroundColor: color,
+                        borderColor: stage.color === color ? '#2D3A30' : 'transparent',
+                        boxShadow: stage.color === color ? `0 0 0 2px white, 0 0 0 4px ${color}` : 'none'
+                      }}
+                    />
                   ))}
                 </div>
               </div>
