@@ -1,211 +1,171 @@
 
-import React, { useState } from 'react';
-import { X, Copy, Download, Link, CheckCircle2, Info, Globe, FileSpreadsheet, Calendar as CalendarIcon, ExternalLink, Zap } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, FileSpreadsheet, Download, Upload, FileText, CheckCircle2, AlertCircle, Info, ChevronRight, Share } from 'lucide-react';
 import { Order } from '../types';
 
 interface SyncModalProps {
   isOpen: boolean;
   onClose: () => void;
   orders: Order[];
+  onImportOrders?: (orders: Order[]) => void;
 }
 
-const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders }) => {
-  const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'sheets' | 'calendar'>('sheets');
+const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImportOrders }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [lastAction, setLastAction] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  // 1. 导出 JSON (用于恢复数据)
+  const handleExportJSON = () => {
+    const dataStr = JSON.stringify(orders, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    const exportFileDefaultName = `艺策备份_${new Date().toISOString().split('T')[0]}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    showToast("JSON 备份文件已下载");
+  };
 
-  // 将数据转换为 TSV 格式
-  const handleCopyTSV = () => {
-    const headers = ['标题', '优先级', '金额', '来源', '截止日期', '录入日期', '分类', '状态', '进度', '备注'];
+  // 2. 导出 CSV (用于 Excel 查看)
+  const handleExportCSV = () => {
+    const headers = ['标题', '优先级', '金额', '来源', '截止日期', '分类', '进度', '备注'];
     const rows = orders.map(o => [
       o.title,
       o.priority,
       o.totalPrice,
       o.source,
       o.deadline,
-      o.createdAt,
       o.artType,
-      o.status,
       o.progressStage,
-      o.description.replace(/\n/g, ' ')
+      `"${o.description.replace(/"/g, '""')}"` // 包装备注防止逗号错位
     ]);
 
-    const tsvContent = [headers.join('\t'), ...rows.map(r => r.join('\t'))].join('\n');
-    
-    navigator.clipboard.writeText(tsvContent).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  const handleDownloadCSV = () => {
-    const headers = ['Title,Priority,Price,Source,Deadline,CreatedAt,Type,Status,Progress,Description'];
-    const rows = orders.map(o => {
-      return `"${o.title}","${o.priority}",${o.totalPrice},"${o.source}","${o.deadline}","${o.createdAt}","${o.artType}","${o.status}","${o.progressStage}","${o.description.replace(/"/g, '""')}"`;
-    });
-    const csvContent = "\uFEFF" + [headers, ...rows].join('\n');
+    const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n"); // \uFEFF 解决 Excel 中文乱码
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `ArtNexus_Sheets_${new Date().toISOString().split('T')[0]}.csv`;
+    link.setAttribute('href', url);
+    link.setAttribute('download', `我的排单表_${new Date().toISOString().split('T')[0]}.csv`);
     link.click();
+    showToast("Excel 表格已生成");
   };
 
-  // 生成 iCal (.ics) 文件内容
-  const handleExportICS = () => {
-    const formatDate = (dateStr: string) => {
-      return dateStr.replace(/-/g, '');
+  // 3. 导入恢复
+  const handleImportJSON = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string);
+        if (Array.isArray(json) && onImportOrders) {
+          onImportOrders(json);
+          showToast(`成功恢复 ${json.length} 条企划！`);
+        }
+      } catch (err) {
+        alert("文件解析失败，请确保选择了正确的备份文件。");
+      }
     };
-
-    let icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//ArtNexus Pro//Creative Schedule//CN',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH'
-    ].join('\r\n');
-
-    orders.forEach(order => {
-      const ddl = formatDate(order.deadline);
-      icsContent += '\r\n' + [
-        'BEGIN:VEVENT',
-        `UID:${order.id}@artnexus.pro`,
-        `DTSTAMP:${formatDate(new Date().toISOString().split('T')[0])}T000000Z`,
-        `DTSTART;VALUE=DATE:${ddl}`,
-        `SUMMARY:[DDL] ${order.title} (${order.source})`,
-        `DESCRIPTION:类别: ${order.artType}\\n金额: ¥${order.totalPrice}\\n备注: ${order.description.replace(/\n/g, '\\n')}`,
-        'STATUS:CONFIRMED',
-        'TRANSP:TRANSPARENT',
-        'END:VEVENT'
-      ].join('\r\n');
-    });
-
-    icsContent += '\r\nEND:VCALENDAR';
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `ArtNexus_Deadlines_${new Date().toISOString().split('T')[0]}.ics`;
-    link.click();
+    reader.readAsText(file);
   };
+
+  const showToast = (msg: string) => {
+    setLastAction(msg);
+    setTimeout(() => setLastAction(null), 3000);
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md" onClick={onClose}>
-      <div 
-        className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200"
-        onClick={e => e.stopPropagation()}
-      >
+      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
+        
+        {/* Header */}
         <div className="p-8 border-b border-slate-50 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`p-3 rounded-2xl transition-colors ${activeTab === 'sheets' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
-              {activeTab === 'sheets' ? <FileSpreadsheet className="w-6 h-6" /> : <CalendarIcon className="w-6 h-6" />}
+            <div className="p-3 rounded-2xl bg-violet-50 text-violet-600">
+              <Share className="w-6 h-6" />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">数据同步中心</h2>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">生成本地备份</h2>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Local Export & Restore</p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-            <X className="w-5 h-5 text-slate-400" />
-          </button>
-        </div>
-
-        {/* Tab Switcher */}
-        <div className="px-8 pt-6 flex gap-2">
-          <button 
-            onClick={() => setActiveTab('sheets')}
-            className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all border ${activeTab === 'sheets' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}
-          >
-            Google Sheets
-          </button>
-          <button 
-            onClick={() => setActiveTab('calendar')}
-            className={`flex-1 py-3 text-xs font-bold rounded-xl transition-all border ${activeTab === 'calendar' ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}
-          >
-            Google Calendar
-          </button>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-400"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-8 space-y-6">
-          <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
-             <Zap className="w-3.5 h-3.5 text-amber-500" />
-             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">当前同步模式：一键式半自动 (隐私安全模式)</span>
-          </div>
-
-          {activeTab === 'sheets' ? (
-            <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest pl-1">推荐操作</h3>
-                </div>
-                <button 
-                  onClick={handleCopyTSV}
-                  className={`w-full group relative flex items-center gap-4 p-5 rounded-3xl border-2 transition-all ${
-                    copied ? 'border-emerald-500 bg-emerald-50' : 'border-slate-100 bg-slate-50 hover:border-emerald-200 hover:bg-white'
-                  }`}
-                >
-                  <div className={`p-3 rounded-xl transition-colors ${copied ? 'bg-emerald-500 text-white' : 'bg-white text-slate-400 group-hover:text-emerald-500 shadow-sm'}`}>
-                    {copied ? <CheckCircle2 className="w-6 h-6" /> : <Copy className="w-6 h-6" />}
-                  </div>
-                  <div className="text-left">
-                    <p className={`font-bold ${copied ? 'text-emerald-700' : 'text-slate-900'}`}>
-                      {copied ? '已复制到剪贴板！' : '一键格式化复制 (TSV)'}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1">复制后在 Google Sheets 中直接粘贴即可</p>
-                  </div>
-                </button>
-              </div>
-              <button 
-                onClick={handleDownloadCSV}
-                className="w-full flex items-center justify-center gap-3 p-4 rounded-2xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-violet-200 transition-all font-bold text-sm text-slate-600"
-              >
-                <Download className="w-4 h-4" /> 下载 CSV 文件备份
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="p-6 bg-blue-50 border border-blue-100 rounded-3xl">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-white rounded-lg shadow-sm">
-                    <CalendarIcon className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <h3 className="font-bold text-blue-900 text-sm">全量 DDL 同步 (ICS)</h3>
-                </div>
-                <p className="text-xs text-blue-600/80 leading-relaxed mb-6">
-                  抓取所有未完成订单的截稿日，生成标准日历包。
-                </p>
-                <button 
-                  onClick={handleExportICS}
-                  className="w-full flex items-center justify-center gap-3 p-4 rounded-2xl bg-blue-600 text-white font-bold text-sm shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
-                >
-                  <Download className="w-4 h-4" /> 生成并下载日历文件
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">导入指南</p>
-                <a 
-                  href="https://calendar.google.com/calendar/u/0/r/settings/export" 
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-blue-400"></div>
-                    <span className="text-xs font-bold text-slate-600">前往 Google 日历设置页</span>
-                  </div>
-                  <ExternalLink className="w-4 h-4 text-slate-300 group-hover:text-blue-500" />
-                </a>
-              </div>
+          {lastAction && (
+            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 text-emerald-600 animate-in slide-in-from-top-2">
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="text-xs font-bold">{lastAction}</span>
             </div>
           )}
 
-          <div className="pt-4 border-t border-slate-50">
-            <div className="flex items-start gap-2 p-4 bg-violet-50/50 rounded-2xl">
-              <Info className="w-4 h-4 text-violet-500 mt-0.5 flex-shrink-0" />
-              <div className="text-[10px] text-violet-600/80 leading-relaxed">
-                <p className="font-bold mb-1">为什么不是全自动实时同步？</p>
-                <p>为了保障您的数据不被第三方服务器存储。目前的一键复制方案无需授权，且能完美适配 Google 表格的任意列布局。</p>
+          {/* 导出选项 */}
+          <div className="space-y-3">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">数据导出</h3>
+            
+            <button 
+              onClick={handleExportJSON}
+              className="w-full flex items-center justify-between p-5 bg-white border border-slate-100 rounded-3xl hover:border-violet-300 hover:bg-violet-50/30 transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-violet-100 text-violet-600 rounded-2xl group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                  <Download className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-slate-900 text-sm">导出系统备份 (.json)</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">用于在此网页或其他设备恢复所有数据</p>
+                </div>
               </div>
-            </div>
+              <ChevronRight className="w-5 h-5 text-slate-300" />
+            </button>
+
+            <button 
+              onClick={handleExportCSV}
+              className="w-full flex items-center justify-between p-5 bg-white border border-slate-100 rounded-3xl hover:border-emerald-300 hover:bg-emerald-50/30 transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-100 text-emerald-600 rounded-2xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-slate-900 text-sm">导出 Excel 表格 (.csv)</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">方便电脑查看、打印或离线记账</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-slate-300" />
+            </button>
+          </div>
+
+          <div className="h-px bg-slate-100" />
+
+          {/* 恢复选项 */}
+          <div className="space-y-3">
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">数据恢复</h3>
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full flex items-center gap-4 p-5 bg-slate-50 border border-dashed border-slate-200 rounded-3xl hover:bg-slate-100 transition-all group"
+            >
+              <div className="p-3 bg-white text-slate-400 rounded-2xl group-hover:text-violet-600 transition-colors">
+                <Upload className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-slate-600 text-sm">从备份文件恢复</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">选择您之前导出的 .json 文件</p>
+              </div>
+              <input type="file" ref={fileInputRef} onChange={handleImportJSON} accept=".json" className="hidden" />
+            </button>
+          </div>
+
+          <div className="p-5 bg-amber-50 rounded-3xl border border-amber-100 flex gap-4">
+             <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+             <div className="text-[11px] text-amber-700 leading-relaxed">
+               <b>温馨提示：</b>艺策目前采用本地存储。为了确保数据万无一失，建议您每周点击一次“导出系统备份”并保存在手机或电脑里。
+             </div>
           </div>
         </div>
       </div>

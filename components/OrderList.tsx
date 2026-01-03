@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Order, OrderStatus, STAGE_PROGRESS_MAP } from '../types';
-import { MoreHorizontal, ShieldCheck, Edit2, Zap, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, Edit2, Zap, ArrowUpDown, Calendar as CalendarIcon, CheckCircle2 } from 'lucide-react';
 
 interface OrderListProps {
   orders: Order[];
@@ -12,7 +12,7 @@ interface OrderListProps {
 type SortKey = 'deadline' | 'createdAt';
 
 const OrderList: React.FC<OrderListProps> = ({ orders, onAddNew, onEditOrder }) => {
-  const [sortKey, setSortKey] = useState<SortKey>('deadline');
+  const [sortKey, setSortKey] = React.useState<SortKey>('deadline');
 
   const sortedOrders = [...orders].sort((a, b) => {
     const valA = a[sortKey] || '';
@@ -38,6 +38,25 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onAddNew, onEditOrder }) 
       case '组合页': return 'bg-amber-50 text-amber-700';
       default: return 'bg-slate-50';
     }
+  };
+
+  // 生成 Google 日历链接
+  const handleAddToCalendar = (order: Order) => {
+    const ddl = order.deadline.replace(/-/g, '');
+    const isCompleted = order.progressStage === '成稿';
+    const statusEmoji = isCompleted ? '✅' : '⏳';
+    
+    const title = encodeURIComponent(`${statusEmoji} 排单: ${order.title} [${order.source}]`);
+    const details = encodeURIComponent(
+      `企划进度: ${order.progressStage}\n` +
+      `金额: ¥${order.totalPrice}\n` +
+      `录入时间: ${order.createdAt}\n` +
+      `备注: ${order.description}\n\n` +
+      `来自 ArtNexus Pro 艺策`
+    );
+    
+    const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${ddl}/${ddl}&details=${details}&location=${encodeURIComponent(order.source)}`;
+    window.open(url, '_blank');
   };
 
   return (
@@ -87,13 +106,16 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onAddNew, onEditOrder }) 
           <tbody className="divide-y divide-slate-50">
             {sortedOrders.map((order) => {
               const progress = STAGE_PROGRESS_MAP[order.progressStage || '未开始'];
+              const isCompleted = progress === 100;
+              
               return (
                 <tr key={order.id} className="hover:bg-slate-50/30 transition-colors group">
                   <td className="px-8 py-5">
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-slate-900 truncate">{order.title}</span>
-                        {order.priority === '高' && <Zap className="w-3 h-3 text-rose-500 fill-rose-500 flex-shrink-0" />}
+                        <span className={`text-sm font-bold truncate ${isCompleted ? 'text-slate-400 line-through' : 'text-slate-900'}`}>{order.title}</span>
+                        {order.priority === '高' && !isCompleted && <Zap className="w-3 h-3 text-rose-500 fill-rose-500" />}
+                        {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
                       </div>
                       <span className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-tighter">截止: {order.deadline}</span>
                     </div>
@@ -112,11 +134,11 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onAddNew, onEditOrder }) 
                     <div className="w-full">
                       <div className="flex justify-between items-center mb-1 text-[10px] font-bold text-slate-500">
                         <span>{order.progressStage}</span>
-                        <span className="text-violet-500">{progress}%</span>
+                        <span className={isCompleted ? 'text-emerald-500' : 'text-violet-500'}>{progress}%</span>
                       </div>
                       <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                         <div 
-                          className={`h-full transition-all duration-700 ${progress === 100 ? 'bg-emerald-500' : 'bg-violet-500'}`} 
+                          className={`h-full transition-all duration-700 ${isCompleted ? 'bg-emerald-500' : 'bg-violet-500'}`} 
                           style={{ width: `${progress}%` }} 
                         />
                       </div>
@@ -129,22 +151,28 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onAddNew, onEditOrder }) 
                   </td>
                   <td className="px-8 py-5">
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-slate-900">¥{order.totalPrice}</span>
+                      <span className={`text-sm font-bold ${isCompleted ? 'text-slate-400' : 'text-slate-900'}`}>¥{order.totalPrice}</span>
                       {(order.source === '米画师' || order.source === '画加') && (
                         <span className="text-[9px] text-slate-400">实收 ¥{(order.totalPrice * 0.95).toFixed(0)}</span>
                       )}
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-right relative overflow-hidden">
-                    <div className="flex items-center justify-end h-10 min-w-[120px]">
+                  <td className="px-8 py-5 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                        <button 
+                            onClick={() => handleAddToCalendar(order)}
+                            className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                            title="添加至 Google 日历"
+                        >
+                            <CalendarIcon className="w-4 h-4" />
+                        </button>
                         <button 
                             onClick={() => onEditOrder(order)}
-                            className="flex items-center gap-2 p-2 px-3 hover:bg-violet-50 rounded-xl text-slate-400 hover:text-violet-600 transition-all opacity-0 group-hover:opacity-100 absolute right-8 translate-x-4 group-hover:translate-x-0"
+                            className="p-2 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                         >
                             <Edit2 className="w-4 h-4" />
-                            <span className="text-xs font-bold">详情/修改</span>
                         </button>
-                        <button className="p-2 text-slate-300 transition-opacity group-hover:opacity-0">
+                        <button className="p-2 text-slate-300">
                             <MoreHorizontal className="w-5 h-5" />
                         </button>
                     </div>

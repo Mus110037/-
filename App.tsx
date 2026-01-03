@@ -21,7 +21,6 @@ const INITIAL_ORDERS: Order[] = [
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [orders, setOrders] = useState<Order[]>(() => {
-    // 初始化时尝试从本地存储读取
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : INITIAL_ORDERS;
   });
@@ -31,7 +30,6 @@ const App: React.FC = () => {
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
-  // 每当 orders 改变时，自动保存到本地存储
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
   }, [orders]);
@@ -54,6 +52,10 @@ const App: React.FC = () => {
       setOrders([...orders, orderWithTime]);
     }
     setEditingOrder(null);
+  };
+
+  const handleImportOrders = (imported: Order[]) => {
+    setOrders(imported);
   };
 
   const handleStartEdit = (order: Order) => {
@@ -131,10 +133,10 @@ const App: React.FC = () => {
             <button 
               onClick={() => setIsSyncModalOpen(true)}
               className="p-3 bg-white text-slate-600 border border-slate-200 rounded-2xl flex items-center gap-2 hover:bg-slate-50 transition-all shadow-sm"
-              title="同步中心"
+              title="同步与备份"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> 
-              <span className="hidden md:inline font-bold text-sm">同步</span>
+              <span className="hidden md:inline font-bold text-sm">备份同步</span>
             </button>
             <button 
               onClick={() => setIsCreateModalOpen(true)}
@@ -170,7 +172,8 @@ const App: React.FC = () => {
       <SyncModal 
         isOpen={isSyncModalOpen} 
         onClose={() => setIsSyncModalOpen(false)} 
-        orders={orders} 
+        orders={orders}
+        onImportOrders={handleImportOrders}
       />
     </div>
   );
