@@ -12,7 +12,7 @@ import SettingsView from './components/SettingsView';
 import SocialShareModal from './components/SocialShareModal';
 import ImportModal from './components/ImportModal';
 import { Order, OrderStatus, DEFAULT_STAGES, DEFAULT_SOURCES, DEFAULT_ART_TYPES, DEFAULT_PERSON_COUNTS, SAMPLE_ORDERS, AppSettings } from './types';
-import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone, CheckCircle2, Zap } from 'lucide-react';
+import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone, CheckCircle2, Zap, Wand2 } from 'lucide-react';
 import { getSchedulingInsights } from './services/geminiService';
 
 const STORAGE_KEY = 'artnexus_orders_v5';
@@ -102,7 +102,7 @@ const App: React.FC = () => {
       setMergeSummary({ updated, added });
       setTimeout(() => setMergeSummary(null), 5000);
     } else {
-      setOrders(newOrders);
+      setOrders([...orders, ...newOrders]);
     }
   };
 
@@ -137,6 +137,17 @@ const App: React.FC = () => {
                 <span className="text-[10px] font-bold">融合成功：更新{mergeSummary.updated}项 / 新增{mergeSummary.added}项</span>
               </div>
             )}
+            
+            {/* 电脑端专用：AI 截图识别入口 */}
+            <button 
+              onClick={() => setIsImportModalOpen(true)}
+              className="hidden md:flex items-center gap-2 px-5 py-3 bg-[#EDF1EE] text-[#3A5A40] border border-[#D1D9D3] rounded-xl hover:bg-[#D1D9D3] transition-all group"
+              title="AI 截图排单"
+            >
+              <Wand2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+              <span className="font-bold text-[11px] uppercase tracking-widest">AI 识图排单</span>
+            </button>
+
             <button 
               onClick={() => setIsSyncModalOpen(true)} 
               className="flex items-center justify-center gap-2 px-3 py-3 md:px-5 bg-[#3A5A40] text-white rounded-xl hover:opacity-90 transition-all shadow-md"
@@ -183,7 +194,7 @@ const App: React.FC = () => {
       <CreateOrderModal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setEditingOrder(null); }} onSave={handleSaveOrder} onDelete={handleDeleteOrder} initialOrder={editingOrder} settings={settings} />
       <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={handleImportOrders} />
       <SocialShareModal isOpen={isSocialModalOpen} onClose={() => setIsSocialModalOpen(false)} orders={orders} />
-      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, true)} />
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, false)} />
     </div>
   );
 };
