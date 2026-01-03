@@ -92,24 +92,38 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
                   {dayOrders.slice(0, 4).map(order => {
                     const stage = getStageConfig(order.progressStage);
                     const isHigh = order.priority === '高';
+                    const isFinished = stage.progress === 100;
+                    
                     return (
                       <div 
                         key={order.id} 
                         onClick={() => onEditOrder(order)} 
-                        className={`w-full relative h-4 md:h-6 rounded md:rounded-md overflow-hidden border border-slate-100 bg-slate-50 cursor-pointer transition-all mb-0.5 group flex items-center`}
+                        className={`w-full relative h-5 md:h-6 rounded md:rounded-lg overflow-hidden border transition-all mb-0.5 group flex items-center px-1.5 shadow-sm bg-[#E8E6DF] ${isHigh ? 'ring-1 ring-amber-400/30' : ''}`}
+                        style={{ 
+                          borderColor: 'rgba(0,0,0,0.05)'
+                        }}
                       >
-                        <div className="absolute inset-y-0 left-0 w-full opacity-20" style={{ backgroundColor: stage.color }} />
-                        <div className="absolute inset-y-0 left-0 w-1 md:w-0.5" style={{ backgroundColor: stage.color }} />
-                        <div className="relative z-10 h-full flex items-center px-1 md:px-1.5 gap-1 overflow-hidden">
-                          <span className={`text-[7px] md:text-[9px] font-bold truncate ${isHigh ? 'text-red-600' : 'text-[#2D362E]'}`}>
+                        {/* 进度条填充 */}
+                        <div 
+                          className="absolute inset-y-0 left-0 transition-all duration-700 ease-out"
+                          style={{ 
+                            width: `${stage.progress}%`, 
+                            backgroundColor: stage.color 
+                          }} 
+                        />
+                        
+                        {/* 文字内容 - 确保 z-index 在进度条之上 */}
+                        <div className="relative z-10 w-full flex items-center gap-1 overflow-hidden pointer-events-none">
+                          <span className={`text-[8px] md:text-[10px] font-black truncate leading-none transition-colors ${isFinished ? 'text-white' : 'text-[#2D3A30]'}`}>
                             {order.title}
                           </span>
                         </div>
-                        {isHigh && <div className="absolute right-0.5 w-1 h-1 bg-red-500 rounded-full md:hidden" />}
+                        
+                        {isHigh && <div className="absolute top-1 right-1 w-1 h-1 bg-red-500 rounded-full animate-pulse z-20" />}
                       </div>
                     );
                   })}
-                  {dayOrders.length > 4 && <div className="text-[8px] font-black text-slate-300 ml-1.5">+</div>}
+                  {dayOrders.length > 4 && <div className="text-[8px] font-black text-slate-300 ml-1.5 font-sans tracking-tighter">+{dayOrders.length - 4} items</div>}
                 </div>
               </div>
             );

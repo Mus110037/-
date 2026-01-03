@@ -8,22 +8,21 @@ interface SettingsViewProps {
   setSettings: (s: AppSettings) => void;
 }
 
-// 保留用户选定的 14 色复古同色系色板
+/**
+ * 重新设计的“标签感”色板 (Sticky Note Palette)
+ * 1. 减少数量：从 14 减至 8，降低选择困难
+ * 2. 增加色系差异：涵盖黄、橙、粉、紫、蓝、绿，像一叠分类便利贴
+ * 3. 进度逻辑：从高亮浅色（起步）向稳重深色（完成）演进
+ */
 const PRESET_COLORS = [
-  '#2D3A30', // 深森林
-  '#3E4D3E', // 暗苔藓
-  '#6B7A6B', // 灰绿
-  '#96A68A', // 浅鼠尾草
-  '#D6D2C4', // 暖灰石
-  '#E2DEC9', // 复古纸张
-  '#7A8B8B', // 灰蓝绿
-  '#D4A373', // 粘土橘
-  '#B2967D', // 暖褐
-  '#8B9A9A', // 钢灰
-  '#4F6D58', // 标志绿
-  '#263228', // 墨绿
-  '#747D63', // 橄榄
-  '#464D47'  // 炭黑
+  '#FFF9C4', // 经典浅黄 (构思/草稿)
+  '#FFECB3', // 暖橙色 (布局/动态)
+  '#FCE4EC', // 樱花粉 (线稿/色稿)
+  '#F3E5F5', // 丁香紫 (底色/铺色)
+  '#E3F2FD', // 晴空蓝 (刻画/光影)
+  '#E8F5E9', // 薄荷绿 (细化/调整)
+  '#A3B18A', // 鼠尾草绿 (收尾阶段)
+  '#4B5E4F'  // 品牌深绿 (完全达成)
 ];
 
 const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings }) => {
@@ -50,7 +49,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings }) =>
               <h3 className="text-sm font-bold text-[#2C332D] tracking-tight uppercase">创作流阶段配置</h3>
             </div>
             <button 
-              onClick={() => setLocalSettings({...localSettings, stages: [...localSettings.stages, { name: '新阶段', progress: 50, color: '#A8A291' }]})} 
+              onClick={() => setLocalSettings({...localSettings, stages: [...localSettings.stages, { name: '新阶段', progress: 50, color: PRESET_COLORS[0] }]})} 
               className="p-2 bg-white border border-[#D6D2C4] rounded-xl text-[#4B5E4F] hover:bg-[#F4F1EA] transition-all"
             >
               <Plus className="w-4 h-4" />
@@ -92,7 +91,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings }) =>
                     </button>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {PRESET_COLORS.map(color => (
                     <button 
                       key={color} 
@@ -101,12 +100,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings }) =>
                         newStages[idx].color = color;
                         setLocalSettings({ ...localSettings, stages: newStages });
                       }} 
-                      className={`w-5 h-5 rounded-md transition-all ${
+                      className={`w-8 h-8 rounded-lg transition-all border shadow-sm ${
                         stage.color === color 
-                          ? 'ring-2 ring-offset-2 ring-[#4B5E4F] scale-110 shadow-sm' 
-                          : 'hover:scale-110'
+                          ? 'ring-2 ring-offset-2 ring-[#4B5E4F] scale-110' 
+                          : 'hover:scale-105 border-slate-100'
                       }`} 
                       style={{ backgroundColor: color }}
+                      title={color}
                     />
                   ))}
                 </div>

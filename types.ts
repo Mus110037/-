@@ -50,14 +50,15 @@ export interface Order {
   description: string;
 }
 
+// 采用“标签感”渐进配色
 export const DEFAULT_STAGES: StageConfig[] = [
-  { name: '未开始', progress: 0, color: '#A8A291' },
-  { name: '构图/动态', progress: 15, color: '#7A8B7C' },
-  { name: '色稿', progress: 30, color: '#90A19D' },
-  { name: '草稿', progress: 50, color: '#B2B7A5' },
-  { name: '线稿', progress: 70, color: '#4B5E4F' },
-  { name: '细化', progress: 90, color: '#D4A373' },
-  { name: '成稿', progress: 100, color: '#3D4C41' }
+  { name: '未开始', progress: 0, color: '#FFF9C4' },     // 浅黄
+  { name: '构图/动态', progress: 15, color: '#FFECB3' }, // 暖橙
+  { name: '色稿', progress: 30, color: '#FCE4EC' },     // 樱花粉
+  { name: '草稿', progress: 50, color: '#F3E5F5' },     // 丁香紫
+  { name: '线稿', progress: 70, color: '#E3F2FD' },     // 晴空蓝
+  { name: '细化', progress: 90, color: '#E8F5E9' },     // 薄荷绿
+  { name: '成稿', progress: 100, color: '#4B5E4F' }     // 森林绿 (完成)
 ];
 
 export const DEFAULT_SOURCES: SourceConfig[] = [
