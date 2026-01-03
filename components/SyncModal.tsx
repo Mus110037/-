@@ -129,7 +129,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
       const minified = minifyData(orders);
       const dataStr = JSON.stringify(minified);
       const compressed = await compress(dataStr);
-      // 使用更短的前缀 AZ: (ArtNexus Zip)
+      // 使用更短的前缀 AZ: (ArtPulse Zip)
       const finalToken = `AZ:${compressed}`;
       
       await navigator.clipboard.writeText(finalToken);
@@ -153,9 +153,10 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
         const encodedPart = token.split('AZ:')[1].trim().replace(/[\s\n\r]/g, '');
         decodedData = await decompress(encodedPart, 'deflate');
         needsUnminify = true;
-      } else if (token.includes('ARTNEXUS_Z:')) {
-        // 旧版压缩：Gzip
-        const encodedPart = token.split('ARTNEXUS_Z:')[1].trim().replace(/[\s\n\r]/g, '');
+      } else if (token.includes('ARTPULSE_Z:') || token.includes('ARTNEXUS_Z:')) {
+        // 旧版/新版兼容压缩：Gzip
+        const prefix = token.includes('ARTPULSE_Z:') ? 'ARTPULSE_Z:' : 'ARTNEXUS_Z:';
+        const encodedPart = token.split(prefix)[1].trim().replace(/[\s\n\r]/g, '');
         decodedData = await decompress(encodedPart, 'gzip');
       }
 
@@ -181,7 +182,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
   const handleQuickReadClipboard = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      if (text && (text.includes('AZ:') || text.includes('ARTNEXUS_Z:'))) {
+      if (text && (text.includes('AZ:') || text.includes('ARTPULSE_Z:') || text.includes('ARTNEXUS_Z:'))) {
         setClipboardValue(text);
         processImportToken(text);
       } else {
@@ -243,8 +244,8 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                   try {
                     const compressed = await compress(JSON.stringify(minifyData(orders)));
                     const token = `AZ:${compressed}`;
-                    const file = new File([token], "艺策极简口令.txt", { type: 'text/plain' });
-                    await navigator.share({ files: [file], title: '艺策极简口令' });
+                    const file = new File([token], "艺脉极简口令.txt", { type: 'text/plain' });
+                    await navigator.share({ files: [file], title: '艺脉极简口令' });
                   } catch(e) {} finally { setIsGenerating(false); }
                 }} 
                 disabled={isGenerating || !supportsShare}
@@ -274,7 +275,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                    value={clipboardValue}
                    onChange={(e) => {
                      setClipboardValue(e.target.value);
-                     if (e.target.value.startsWith('AZ:') || e.target.value.includes('ARTNEXUS')) {
+                     if (e.target.value.startsWith('AZ:') || e.target.value.includes('ARTPULSE') || e.target.value.includes('ARTNEXUS')) {
                        processImportToken(e.target.value);
                      }
                    }}

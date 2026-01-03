@@ -1,15 +1,15 @@
 
 {
-  "name": "ArtNexus Pro | 艺策",
-  "short_name": "艺策",
-  "description": "专为顶尖插画师打造的智能创作排单系统",
+  "name": "画饼 | HuaBing",
+  "short_name": "画饼",
+  "description": "插画师专属的抽象大饼管理系统",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#3A5A40",
-  "theme_color": "#3A5A40",
+  "background_color": "#F4F1EA",
+  "theme_color": "#4B5E4F",
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%233A5A40'/%3E%3Cpath d='M256 120c-75 0-136 61-136 136s61 136 136 136c12 0 22.4-10.4 22.4-22.4 0-5.8-2.4-11.2-6.2-15s-6.2-9.2-6.2-15c0-12.4 10-22.4 22.4-22.4h24.2c43.2 0 78-34.8 78-78C390.6 181 331 120 256 120z' fill='none' stroke='%23F2F4F0' stroke-width='20' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='202' cy='215' r='12' fill='%23F2F4F0'/%3E%3Ccircle cx='270' cy='188' r='12' fill='%23F2F4F0'/%3E%3Ccircle cx='324' cy='242' r='12' fill='%23F2F4F0'/%3E%3Ccircle cx='214' cy='298' r='12' fill='%23F2F4F0'/%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%23D4A373'/%3E%3Ccircle cx='256' cy='256' r='180' fill='%23E9C46A'/%3E%3Ccircle cx='400' cy='150' r='80' fill='%23D4A373'/%3E%3Ccircle cx='200' cy='220' r='15' fill='%23264653'/%3E%3Ccircle cx='312' cy='220' r='15' fill='%23264653'/%3E%3Cpath d='M220 300 Q 256 340 292 300' stroke='%23264653' stroke-width='10' stroke-linecap='round' fill='none'/%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"

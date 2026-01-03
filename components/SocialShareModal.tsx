@@ -57,7 +57,7 @@ const SocialShareModal: React.FC<SocialShareModalProps> = ({ isOpen, onClose, or
               <div className="absolute top-0 right-0 w-32 h-32 bg-[#E6E2D3]/20 dark:bg-slate-800/20 rounded-full -mr-16 -mt-16 blur-3xl"></div>
               
               <div className="relative z-10">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">ArtNexus Pro / 艺策</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-2">ArtPulse / 艺脉</p>
                 <h4 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tighter">本月创作纪要</h4>
                 <div className="w-10 h-0.5 bg-slate-900 dark:bg-slate-100 mt-4"></div>
               </div>
@@ -85,7 +85,7 @@ const SocialShareModal: React.FC<SocialShareModalProps> = ({ isOpen, onClose, or
               <div className="flex justify-between items-end relative z-10">
                  <div>
                     <p className="text-[8px] font-bold text-slate-400">{new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                    <p className="text-[7px] text-slate-300 uppercase tracking-widest mt-0.5">Verified by ArtNexus AI</p>
+                    <p className="text-[7px] text-slate-300 uppercase tracking-widest mt-0.5">Verified by ArtPulse AI</p>
                  </div>
                  <div className="w-12 h-12 bg-slate-900 dark:bg-slate-100 rounded-xl flex items-center justify-center text-white dark:text-slate-900 shadow-lg">
                     <Sparkles className="w-5 h-5" />

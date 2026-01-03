@@ -18,7 +18,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, setActiveTab }) => {
 
   return (
     <div className="lg:hidden fixed bottom-6 left-4 right-4 z-50 pointer-events-none">
-      <div className="mx-auto max-w-md bg-[#FDFBF7]/90 backdrop-blur-xl border border-[#D6D2C4]/50 shadow-[0_8px_32px_rgba(45,58,48,0.12)] rounded-[2rem] px-2 py-2 flex justify-around items-center pointer-events-auto">
+      <div className="mx-auto max-w-md bg-[#FDFBF7]/90 backdrop-blur-xl border border-[#D6D2C4]/50 shadow-[0_8px_32px_rgba(45,58,48,0.15)] rounded-[2rem] px-2 py-2 flex justify-around items-center pointer-events-auto">
         {menuItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
@@ -29,12 +29,12 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, setActiveTab }) => {
                 isActive ? 'text-[#2D3A30]' : 'text-[#A8A291]'
               }`}
             >
-              {/* 背景呼吸光晕 */}
+              {/* 激活时的背景淡光晕 */}
               {isActive && (
-                <div className="absolute inset-0 bg-[#A3B18A]/10 rounded-2xl animate-in fade-in zoom-in duration-300"></div>
+                <div className="absolute inset-x-1 inset-y-0 bg-[#A3B18A]/10 rounded-2xl animate-in fade-in zoom-in duration-300"></div>
               )}
 
-              <div className={`relative transition-transform duration-300 ease-out ${isActive ? '-translate-y-1 scale-110' : 'group-active:scale-90'}`}>
+              <div className={`relative transition-all duration-300 ease-out ${isActive ? '-translate-y-1.5 scale-110' : 'group-active:scale-90'}`}>
                 <item.icon 
                   className={`w-5 h-5 mb-1 transition-colors ${
                     isActive ? 'text-[#4B5E4F] stroke-[2.5px]' : 'text-[#A8A291]'
@@ -43,20 +43,20 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, setActiveTab }) => {
               </div>
 
               <span className={`text-[9px] font-black tracking-tighter uppercase transition-all duration-300 ${
-                isActive ? 'opacity-100 translate-y-0' : 'opacity-60'
+                isActive ? 'opacity-100 translate-y-0' : 'opacity-40'
               }`}>
                 {item.label}
               </span>
 
-              {/* 激活指示点 */}
+              {/* 激活指示小圆点 */}
               {isActive && (
-                <div className="absolute -bottom-1 w-1 h-1 bg-[#4B5E4F] rounded-full shadow-[0_0_8px_rgba(75,94,79,0.5)]"></div>
+                <div className="absolute -bottom-1 w-1 h-1 bg-[#4B5E4F] rounded-full shadow-[0_0_8px_rgba(75,94,79,0.6)]"></div>
               )}
             </button>
           );
         })}
       </div>
-      {/* 适配全面屏底部安全区空隙 */}
+      {/* 底部安全区适配 */}
       <div className="h-safe-area-inset-bottom"></div>
     </div>
   );
