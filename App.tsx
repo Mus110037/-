@@ -41,7 +41,7 @@ const App: React.FC = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
-  const [mergeSummary, setMergeSummary] = useState<{updated: number, added: number} | null>(null);
+  const [mergeSummary, setMergeSummary] = useState<{updated: number, added: number, replaced: boolean} | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
@@ -76,8 +76,17 @@ const App: React.FC = () => {
     setEditingOrder(null);
   };
 
-  const handleImportOrders = (newOrders: Order[], merge: boolean = false) => {
-    if (merge) {
+  /**
+   * 统一导入处理
+   * @param mode 'append' (追加), 'merge' (基于版本的合并), 'replace' (清空并替换)
+   */
+  const handleImportOrders = (newOrders: Order[], mode: 'append' | 'merge' | 'replace' = 'append') => {
+    if (mode === 'replace') {
+      // 全量替换模式：直接清空并应用
+      setOrders(newOrders);
+      setMergeSummary({ updated: 0, added: newOrders.length, replaced: true });
+    } else if (mode === 'merge') {
+      // 智能融合模式
       let updated = 0;
       let added = 0;
       const mergedMap = new Map<string, Order>();
@@ -99,11 +108,14 @@ const App: React.FC = () => {
         }
       });
       setOrders(Array.from(mergedMap.values()));
-      setMergeSummary({ updated, added });
-      setTimeout(() => setMergeSummary(null), 5000);
+      setMergeSummary({ updated, added, replaced: false });
     } else {
+      // 标准追加模式
       setOrders([...orders, ...newOrders]);
+      setMergeSummary({ updated: 0, added: newOrders.length, replaced: false });
     }
+    
+    setTimeout(() => setMergeSummary(null), 5000);
   };
 
   const handleStartEdit = (order: Order) => {
@@ -132,13 +144,16 @@ const App: React.FC = () => {
           
           <div className="flex items-center gap-2 shrink-0">
             {mergeSummary && (
-              <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 animate-in fade-in slide-in-from-right-4">
+              <div className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-xl border animate-in fade-in slide-in-from-right-4 ${mergeSummary.replaced ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span className="text-[10px] font-bold">融合成功：更新{mergeSummary.updated}项 / 新增{mergeSummary.added}项</span>
+                <span className="text-[10px] font-bold">
+                  {mergeSummary.replaced 
+                    ? `重载成功：已清空并载入 ${mergeSummary.added} 项` 
+                    : `融合成功：更新 ${mergeSummary.updated} 项 / 新增 ${mergeSummary.added} 项`}
+                </span>
               </div>
             )}
             
-            {/* 电脑端专用：AI 截图识别入口 */}
             <button 
               onClick={() => setIsImportModalOpen(true)}
               className="hidden md:flex items-center gap-2 px-5 py-3 bg-[#EDF1EE] text-[#3A5A40] border border-[#D1D9D3] rounded-xl hover:bg-[#D1D9D3] transition-all group"
@@ -194,7 +209,7 @@ const App: React.FC = () => {
       <CreateOrderModal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setEditingOrder(null); }} onSave={handleSaveOrder} onDelete={handleDeleteOrder} initialOrder={editingOrder} settings={settings} />
       <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={handleImportOrders} />
       <SocialShareModal isOpen={isSocialModalOpen} onClose={() => setIsSocialModalOpen(false)} orders={orders} />
-      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, false)} />
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, 'append')} />
     </div>
   );
 };

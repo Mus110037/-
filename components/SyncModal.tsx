@@ -7,7 +7,7 @@ interface SyncModalProps {
   isOpen: boolean;
   onClose: () => void;
   orders: Order[];
-  onImportOrders?: (orders: Order[], merge: boolean) => void;
+  onImportOrders?: (orders: Order[], mode: 'append' | 'merge' | 'replace') => void;
 }
 
 const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImportOrders }) => {
@@ -26,14 +26,12 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
 
   const generateFileName = () => `ArtNexus_Backup_${new Date().toISOString().split('T')[0]}.json`;
 
-  // 增强版 Base64 编码
   const safeBtoa = (str: string) => {
     return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) => {
       return String.fromCharCode(parseInt(p1, 16));
     }));
   };
 
-  // 增强版 Base64 解码
   const safeAtob = (str: string) => {
     try {
       return decodeURIComponent(Array.prototype.map.call(atob(str), (c) => {
@@ -53,7 +51,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
   const handleCopyToClipboard = () => {
     const finalToken = getSyncToken();
     navigator.clipboard.writeText(finalToken).then(() => {
-      alert("同步口令已复制！\n\n小贴士：粘贴时请确保大小写不被系统修改。如果 AirDrop 方便，建议使用旁边的文件传输功能。");
+      alert("同步口令已复制！\n\n小贴士：粘贴时请确保大小写不被系统修改。");
     }).catch(err => {
       prompt("请手动复制口令：", finalToken);
     });
@@ -78,7 +76,6 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
   };
 
   const processImportToken = (token: string) => {
-    // 前缀忽略大小写，但内容必须保留原始大小写
     const regex = /ARTNEXUS:([A-Za-z0-9+/=%\s\n\r]+)/i;
     const match = token.match(regex);
 
@@ -88,36 +85,25 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
     }
 
     const encodedPart = match[1].replace(/[\s\n\r]/g, '');
-    
-    // 诊断：检查是否被全小写化了 (Base64 通常包含大量大写字母)
     const hasUpperCase = /[A-Z]/.test(encodedPart);
-    if (!hasUpperCase && encodedPart.length > 20) {
-      setIsLowercasedWarning(true);
-    } else {
-      setIsLowercasedWarning(false);
-    }
 
     try {
       const decodedData = safeAtob(encodedPart);
       if (!decodedData) throw new Error("Decode Failed");
 
       const parsedOrders = JSON.parse(decodedData);
-      onImportOrders?.(parsedOrders, true);
+      // 口令同步通常用于设备间协作，使用 'merge' 模式
+      onImportOrders?.(parsedOrders, 'merge');
       showToastAndClose("数据同步完成！");
       setClipboardValue('');
       setShowClipboardInput(false);
     } catch (e) {
-      if (!hasUpperCase && encodedPart.length > 20) {
-        alert("导入失败：检测到口令中的大写字母全部变成了小写！\n\n这是由于手机系统的“自动更正”导致的。请尝试点击“智能读取剪贴板”按钮，或者使用 AirDrop 文件方式传输。");
-      } else {
-        alert("口令解析失败，请确保复制了完整的口令代码。");
-      }
+      alert("解析失败，请确保复制了完整的口令。");
     }
   };
 
   const handleQuickReadClipboard = async () => {
     try {
-      // 核心：直接调用 API 读取，绕过键盘输入干扰
       const text = await navigator.clipboard.readText();
       if (text && text.toLowerCase().includes('artnexus:')) {
         setClipboardValue(text);
@@ -126,7 +112,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
         alert("剪贴板中未发现有效的同步口令。");
       }
     } catch (err) {
-      alert("浏览器拒绝访问剪贴板，请手动粘贴到输入框。");
+      alert("无法访问剪贴板，请手动粘贴。");
     }
   };
 
@@ -140,7 +126,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
             <div className="p-3 rounded-2xl bg-[#3A5A40] text-white shadow-lg"><Cloud className="w-6 h-6" /></div>
             <div>
               <h2 className="text-xl font-bold text-[#2D3A30]">同步中心</h2>
-              <p className="text-[10px] text-[#4F6D58] font-black uppercase tracking-widest mt-1">iOS & AirDrop Hub</p>
+              <p className="text-[10px] text-[#4F6D58] font-black uppercase tracking-widest mt-1">Backup & Restore Hub</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-300 hover:text-slate-900 transition-colors"><X className="w-6 h-6" /></button>
@@ -153,10 +139,9 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
             </div>
           )}
 
-          {/* 方案 A：口令传输 */}
           <div className="space-y-4">
             <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest px-1 flex items-center gap-2">
-              <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> 极速口令同步
+              <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> 极速口令同步 (合并)
             </h3>
             
             <div className="grid grid-cols-2 gap-3">
@@ -194,7 +179,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                 </div>
                 
                 <textarea 
-                  className={`w-full p-4 bg-white border rounded-2xl text-[10px] font-medium outline-none transition-all shadow-inner ${isLowercasedWarning ? 'border-red-400 bg-red-50' : 'border-slate-200 focus:border-amber-500'}`}
+                  className={`w-full p-4 bg-white border rounded-2xl text-[10px] font-medium outline-none transition-all shadow-inner border-slate-200 focus:border-amber-500`}
                   rows={4} 
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -202,22 +187,8 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                   autoComplete="off"
                   placeholder="在此粘贴 ARTNEXUS: 开头的代码..."
                   value={clipboardValue}
-                  onChange={e => {
-                    setClipboardValue(e.target.value);
-                    if (e.target.value.length > 20) {
-                      setIsLowercasedWarning(!/[A-Z]/.test(e.target.value.split(':')[1] || ''));
-                    }
-                  }}
+                  onChange={e => setClipboardValue(e.target.value)}
                 />
-
-                {isLowercasedWarning && (
-                  <div className="flex items-start gap-2 p-3 bg-red-100 border border-red-200 rounded-xl">
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" />
-                    <p className="text-[9px] leading-relaxed text-red-800 font-bold">
-                      警告：内容疑似被系统转为了全小写！这将导致口令失效。请尝试使用上方的“智能读取剪贴板”或 AirDrop 文件同步。
-                    </p>
-                  </div>
-                )}
 
                 <button 
                   onClick={() => processImportToken(clipboardValue)} 
@@ -232,9 +203,11 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
 
           <div className="h-px bg-slate-100" />
 
-          {/* 方案 B：全量文件 */}
           <div className="space-y-4">
-            <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest px-1">全量数据同步</h3>
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest">全量数据恢复 (替换)</h3>
+              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded uppercase">清空现有内容</span>
+            </div>
             <div className="grid grid-cols-1 gap-3">
               <button onClick={async () => {
                 const dataStr = JSON.stringify(orders, null, 2);
@@ -254,18 +227,25 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                   <div className="p-2.5 bg-[#F2F4F0] group-hover:bg-[#3A5A40] group-hover:text-white rounded-xl transition-colors"><Download className="w-4 h-4" /></div>
                   <div className="text-left">
                     <span className="font-bold text-xs block">生成全量备份文件</span>
-                    <span className="text-[8px] opacity-50 block uppercase tracking-tighter">最稳健的 AirDrop 方式</span>
+                    <span className="text-[8px] opacity-50 block uppercase tracking-tighter">下载当前所有企划</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 opacity-30" />
               </button>
 
-              <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-between p-5 bg-white border border-slate-200 text-[#2D3A30] rounded-3xl hover:border-[#3A5A40] transition-all group">
+              <button 
+                onClick={() => {
+                  if(confirm("警告：载入备份文件将清空当前所有企划，并以备份文件为准。是否继续？")) {
+                    fileInputRef.current?.click();
+                  }
+                }} 
+                className="w-full flex items-center justify-between p-5 bg-white border border-slate-200 text-[#2D3A30] rounded-3xl hover:border-amber-500 hover:bg-amber-50 transition-all group"
+              >
                 <div className="flex items-center gap-4">
-                  <div className="p-2.5 bg-[#F2F4F0] group-hover:bg-[#3A5A40] group-hover:text-white rounded-xl transition-colors"><Upload className="w-4 h-4" /></div>
+                  <div className="p-2.5 bg-[#F2F4F0] group-hover:bg-amber-500 group-hover:text-white rounded-xl transition-colors"><Upload className="w-4 h-4" /></div>
                   <div className="text-left">
-                    <span className="font-bold text-xs block">载入备份文件</span>
-                    <span className="text-[8px] opacity-50 block uppercase tracking-tighter">从本地或 AirDrop 接收中选择</span>
+                    <span className="font-bold text-xs block">载入备份文件 (替换式)</span>
+                    <span className="text-[8px] text-amber-600 font-bold block uppercase tracking-tighter">清空并恢复至此文件状态</span>
                   </div>
                 </div>
                 <input type="file" ref={fileInputRef} onChange={e => {
@@ -275,13 +255,14 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                     reader.onload = (ev) => {
                        try {
                          const data = JSON.parse(ev.target?.result as string);
-                         onImportOrders?.(data, true);
-                         showToastAndClose("融合成功");
-                       } catch(e) { alert("文件格式错误。"); }
+                         // 备份恢复使用 'replace' 模式，清空现有数据
+                         onImportOrders?.(data, 'replace');
+                         showToastAndClose("数据已全量替换");
+                       } catch(e) { alert("文件解析失败，请确保是有效的 JSON 备份文件。"); }
                     };
                     reader.readAsText(file);
                   }
-                }} className="hidden" accept=".json,application/json,.txt" />
+                }} className="hidden" accept=".json,application/json" />
                 <ChevronRight className="w-4 h-4 opacity-30" />
               </button>
             </div>

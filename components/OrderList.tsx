@@ -3,6 +3,7 @@ import React from 'react';
 import { Order, AppSettings } from '../types';
 import { Zap, ArrowUpDown, Smartphone, Download, CalendarCheck, MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale/zh-CN';
 
 interface OrderListProps {
   orders: Order[];
@@ -79,11 +80,18 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, settings }) 
         {sortedOrders.map((order) => {
           const stage = getStageConfig(order.progressStage);
           const isCompleted = stage.progress === 100;
+          const deadlineDate = new Date(order.deadline.replace(/-/g, '/'));
+          
           return (
             <div key={order.id} onClick={() => onEditOrder(order)} className="flex items-center gap-4 p-5 hover:bg-slate-50 transition-all cursor-pointer group">
-              <div className="flex flex-col items-center justify-center w-10 h-10 bg-slate-900 rounded-xl shrink-0">
-                <span className="text-[10px] font-black text-white leading-none">{order.deadline.slice(8,10)}</span>
-                <span className="text-[7px] font-bold text-slate-400 leading-none mt-1 uppercase">{order.deadline.slice(5,7)}月</span>
+              {/* 优化后的日期徽章 */}
+              <div className="flex flex-col items-center justify-center w-12 h-12 bg-[#2D3A30] rounded-2xl shrink-0 shadow-lg border border-white/5 transition-transform group-hover:scale-105">
+                <span className="text-[16px] font-black text-white leading-none tracking-tighter">
+                  {format(deadlineDate, 'dd')}
+                </span>
+                <span className="text-[9px] font-bold text-[#A3B18A] leading-none mt-1.5 uppercase tracking-widest">
+                  {format(deadlineDate, 'MMM', { locale: zhCN })}
+                </span>
               </div>
 
               <div className="flex-1 min-w-0">
@@ -104,7 +112,6 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, settings }) 
                 <div className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{order.source}</div>
               </div>
 
-              {/* 移动端始终可见，电脑端悬浮可见 */}
               <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all">
                 <button 
                   onClick={(e) => handleExportSingleICS(e, order)}

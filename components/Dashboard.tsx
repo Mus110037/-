@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Order, AppSettings } from '../types';
 import { Wallet, Calendar as CalendarIcon, Zap, GripVertical } from 'lucide-react';
 import { format } from 'date-fns';
+import { zhCN } from 'date-fns/locale/zh-CN';
 
 interface DashboardProps {
   orders: Order[];
@@ -95,10 +96,17 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                 <div className="space-y-1">
                   {upcomingOrders.map(o => {
                     const stage = getStageConfig(o);
+                    const deadlineDate = new Date(o.deadline.replace(/-/g, '/'));
                     return (
                       <div key={o.id} className="flex items-center gap-4 p-4 hover:bg-[#F2F4F0] rounded-2xl transition-all border border-transparent hover:border-[#D1D9D3]">
-                        <div className="flex flex-col items-center justify-center w-10 h-10 bg-[#3A5A40] rounded-xl shrink-0 shadow-sm">
-                          <span className="text-base font-black text-white leading-none">{format(new Date(o.deadline.replace(/-/g, '/')), 'd')}</span>
+                        {/* 保持一致的日期徽章 */}
+                        <div className="flex flex-col items-center justify-center w-12 h-12 bg-[#2D3A30] rounded-2xl shrink-0 shadow-lg border border-white/5">
+                          <span className="text-[16px] font-black text-white leading-none tracking-tighter">
+                            {format(deadlineDate, 'dd')}
+                          </span>
+                          <span className="text-[9px] font-bold text-[#A3B18A] leading-none mt-1.5 uppercase tracking-widest">
+                            {format(deadlineDate, 'MMM', { locale: zhCN })}
+                          </span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5">
