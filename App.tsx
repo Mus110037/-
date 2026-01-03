@@ -11,11 +11,12 @@ import SyncModal from './components/SyncModal';
 import SettingsView from './components/SettingsView';
 import SocialShareModal from './components/SocialShareModal';
 import { Order, OrderStatus, DEFAULT_STAGES, DEFAULT_SOURCES, DEFAULT_ART_TYPES, DEFAULT_PERSON_COUNTS, SAMPLE_ORDERS, AppSettings } from './types';
-import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2 } from 'lucide-react';
+import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, CloudSync, Cloud, CloudOff, History } from 'lucide-react';
 import { getSchedulingInsights } from './services/geminiService';
 
 const STORAGE_KEY = 'artnexus_orders_v5';
 const SETTINGS_KEY = 'artnexus_settings_v5';
+const SNAPSHOT_KEY = 'artnexus_auto_snapshots';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -39,15 +40,47 @@ const App: React.FC = () => {
   const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
+  const [syncState, setSyncState] = useState<'active' | 'manual' | 'disconnected'>('disconnected');
+
+  useEffect(() => {
+    const hasLinked = localStorage.getItem('artnexus_linked_file');
+    const supportsAPI = 'showSaveFilePicker' in window && window.self === window.top;
+    if (hasLinked && supportsAPI) setSyncState('active');
+    else if (!supportsAPI) setSyncState('manual');
+    else setSyncState('disconnected');
+  }, [isSyncModalOpen]);
+
+  // 本地存储同步 + 自动快照
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+    
+    // 自动快照：每当数据变动，保存当前版本（最多保留 5 个）
+    const timer = setTimeout(() => {
+      const savedSnapshots = localStorage.getItem(SNAPSHOT_KEY);
+      let snaps = savedSnapshots ? JSON.parse(savedSnapshots) : [];
+      
+      const newSnap = {
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        data: orders
+      };
+
+      // 避免重复保存相同数据
+      if (snaps.length > 0 && JSON.stringify(snaps[snaps.length - 1].data) === JSON.stringify(orders)) {
+        return;
+      }
+
+      snaps.push(newSnap);
+      if (snaps.length > 5) snaps.shift();
+      localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snaps));
+    }, 2000); // 延迟 2 秒保存，避免输入时的频繁写入
+
+    return () => clearTimeout(timer);
   }, [orders]);
 
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
 
-  // 确保移除任何残余的 dark 类
   useEffect(() => {
     document.documentElement.classList.remove('dark');
   }, []);
@@ -119,6 +152,19 @@ const App: React.FC = () => {
       <main className="flex-1 p-4 md:p-10 pb-24 lg:pb-10 overflow-y-auto custom-scrollbar">
         <header className="flex items-center justify-between mb-8">
           <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+               {syncState === 'active' ? (
+                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
+                    <Cloud className="w-2.5 h-2.5" />
+                    <span className="text-[8px] font-black uppercase">Live Sync</span>
+                 </div>
+               ) : (
+                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-200 text-slate-500 rounded-full">
+                    <History className="w-2.5 h-2.5" />
+                    <span className="text-[8px] font-black uppercase">Auto-Snapshot</span>
+                 </div>
+               )}
+            </div>
             <h1 className="text-xl md:text-2xl font-black text-[#2D2D2A] truncate tracking-tight uppercase">
               {activeTab === 'dashboard' ? 'Overview' : 
                activeTab === 'calendar' ? 'Schedule' : 
@@ -132,8 +178,9 @@ const App: React.FC = () => {
             <button onClick={() => setIsSocialModalOpen(true)} className="p-3 bg-white text-[#8E8B82] border border-[#E0DDD5] rounded-xl hover:text-[#2D2D2A] transition-all shadow-sm">
               <Share2 className="w-4 h-4" /> 
             </button>
-            <button onClick={() => setIsSyncModalOpen(true)} className="p-3 bg-white text-[#8E8B82] border border-[#E0DDD5] rounded-xl hover:text-[#2D2D2A] transition-all shadow-sm">
-              <FileSpreadsheet className="w-4 h-4" /> 
+            <button onClick={() => setIsSyncModalOpen(true)} className="p-3 bg-white text-[#8E8B82] border border-[#E0DDD5] rounded-xl hover:text-[#2D2D2A] transition-all shadow-sm relative group">
+              <FileSpreadsheet className="w-4 h-4" />
+              <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white bg-[#A3B18A]"></div>
             </button>
             <button onClick={() => setIsCreateModalOpen(true)} className="p-3 bg-[#333333] text-white rounded-xl flex items-center gap-2 hover:opacity-90 transition-all shadow-md">
               <Plus className="w-4 h-4" /> 

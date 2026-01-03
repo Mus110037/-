@@ -56,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           <p className="text-[9px] font-black text-[#8E8B82] uppercase tracking-widest mb-1.5">Creative Vibe</p>
           <div className="flex items-center gap-2">
             <div className="w-1.5 h-1.5 bg-[#A3B18A] rounded-full animate-pulse shadow-[0_0_5px_rgba(163,177,138,0.5)]"></div>
-            <p className="text-[10px] text-[#4A4944] font-extrabold tracking-wide">交付追踪：数据实时就绪</p>
+            <p className="text-[10px] text-[#4A4944] font-extrabold tracking-wide">同步状态：云端实时就绪</p>
           </div>
         </div>
       </div>
