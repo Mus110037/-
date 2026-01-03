@@ -39,18 +39,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
     const stage = getStageConfig(order.progressStage);
     const isP0 = order.priority === '高';
     
-    // 使用计算出的深色以保证文字辨识度
-    const darkTextColor = '#1B241D'; 
+    // 强制使用超高对比度的文字颜色
+    const textColor = '#1B241D'; 
 
     return {
       style: { 
-        backgroundColor: `${stage.color}15`, 
-        borderColor: `${stage.color}40`, 
-        color: darkTextColor,
-        borderLeftColor: stage.color, // 指示色条使用阶段主色
-        borderLeftWidth: '3.5px'
+        backgroundColor: `${stage.color}18`, // 极淡的背景
+        borderColor: `${stage.color}50`, 
+        color: textColor,
+        borderLeftColor: stage.color, 
+        borderLeftWidth: '4px' // 加宽侧边条
       },
-      className: `text-[9px] md:text-[11px] p-1 md:p-2 rounded-md border truncate cursor-pointer transition-all mb-1 font-extrabold hover:shadow-md leading-tight flex items-center ${isP0 ? 'ring-1 ring-red-500/20' : ''}`
+      className: `text-[10px] md:text-[11px] px-2 py-1.5 md:py-2 rounded-md border truncate cursor-pointer transition-all mb-1 font-black hover:shadow-lg leading-tight flex items-center shadow-sm ${isP0 ? 'ring-1 ring-red-600/30' : ''}`
     };
   };
 
@@ -98,13 +98,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
             const dayOrders = orders.filter(o => isSameDay(new Date(o.deadline.replace(/-/g, '/')), day));
             const isToday = isSameDay(day, new Date());
             return (
-              <div key={i} className={`bg-white min-h-[70px] md:min-h-[150px] p-1.5 md:p-2 transition-colors border-b border-r border-slate-50 relative ${isToday ? 'bg-[#F2F4F0]/30' : ''}`}>
-                <div className="flex justify-start mb-2">
-                   <span className={`text-[10px] md:text-[11px] font-black w-5 h-5 md:w-7 md:h-7 flex items-center justify-center rounded-lg shadow-sm transition-all ${isToday ? 'bg-[#2D3A30] text-white ring-4 ring-[#A3B18A]/20' : 'text-slate-300'}`}>
+              <div key={i} className={`bg-white min-h-[80px] md:min-h-[160px] p-2 md:p-3 transition-colors border-b border-r border-slate-50 relative ${isToday ? 'bg-[#FDFDFB]' : ''}`}>
+                <div className="flex justify-start mb-3">
+                   <span className={`text-[10px] md:text-[11px] font-black w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-xl shadow-sm transition-all ${isToday ? 'bg-[#2D3A30] text-white ring-4 ring-[#A3B18A]/30' : 'text-slate-400 bg-slate-50 border border-slate-100'}`}>
                     {format(day, 'd')}
                   </span>
                 </div>
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-1">
                   {dayOrders.slice(0, 4).map(order => {
                     const { style, className } = getEventStyle(order);
                     return (
@@ -114,7 +114,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
                     );
                   })}
                   {dayOrders.length > 4 && (
-                    <div className="text-[8px] text-[#4F6D58] font-black text-center py-1 mt-0.5 bg-[#EDF1EE] rounded-md">+{dayOrders.length - 4} 更多</div>
+                    <div className="text-[9px] text-[#4F6D58] font-black text-center py-1.5 mt-0.5 bg-[#EDF1EE] rounded-lg border border-[#D1D9D3]">+{dayOrders.length - 4} 更多企划</div>
                   )}
                 </div>
               </div>

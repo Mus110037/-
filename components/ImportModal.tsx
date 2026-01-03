@@ -1,8 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Camera, Sparkles, Loader2, CheckCircle2, AlertCircle, Clipboard, MousePointerSquareDashed, Wand2, Edit3 } from 'lucide-react';
+import { X, Camera, Sparkles, Loader2, CheckCircle2, AlertCircle, Clipboard, MousePointerSquareDashed, Wand2, Edit3, FileSpreadsheet, FileJson } from 'lucide-react';
 import { parseMihuashiScreenshot } from '../services/geminiService';
 import { Order, OrderStatus } from '../types';
+import * as XLSX from 'xlsx';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -16,8 +17,8 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
   const [parsedData, setParsedData] = useState<any[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const excelInputRef = useRef<HTMLInputElement>(null);
 
-  // 监听全局粘贴事件
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       if (!isOpen || loading) return;
@@ -36,6 +37,13 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
   }, [isOpen, loading]);
 
   const processFile = (file: File) => {
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv');
+    
+    if (isExcel) {
+      processExcel(file);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const base64 = ev.target?.result as string;
@@ -55,6 +63,43 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
     reader.readAsDataURL(file);
   };
 
+  const processExcel = (file: File) => {
+    setLoading(true);
+    setPreview(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        // 智能映射 Excel 列名
+        const mappedData = jsonData.map((row: any) => {
+          const findKey = (keywords: string[]) => {
+            const key = Object.keys(row).find(k => keywords.some(kw => k.toLowerCase().includes(kw)));
+            return key ? row[key] : null;
+          };
+
+          return {
+            title: findKey(['名称', '标题', '项目', '企划', 'title', 'name']) || '未命名项目',
+            totalPrice: parseFloat(findKey(['金额', '酬劳', '价格', 'price', 'cost', 'money'])) || 0,
+            deadline: findKey(['日期', '截稿', '交付', '截止', 'deadline', 'date', 'time']) || new Date().toISOString().split('T')[0],
+            progressDesc: findKey(['备注', '描述', '进度', 'desc', 'note']) || 'Excel 导入'
+          };
+        });
+
+        setParsedData(mappedData);
+      } catch (err) {
+        alert('Excel 解析失败，请检查文件格式。');
+      } finally {
+        setLoading(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) processFile(file);
@@ -64,16 +109,16 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith('image/')) processFile(file);
+    if (file) processFile(file);
   };
 
   const confirmImport = () => {
     const newOrders: Order[] = parsedData.map((item, idx) => ({
-      id: `ai-import-${Date.now()}-${idx}`,
-      title: item.title || '未命名企划',
+      id: `import-${Date.now()}-${idx}`,
+      title: item.title,
       priority: '中',
       duration: 5,
-      deadline: item.deadline || new Date().toISOString().split('T')[0],
+      deadline: String(item.deadline).includes('-') ? item.deadline : new Date().toISOString().split('T')[0],
       createdAt: new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString(),
       version: 1,
@@ -82,9 +127,9 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
       commissionType: '商用',
       personCount: '单人',
       artType: '插图',
-      source: '米画师',
-      totalPrice: item.totalPrice || 0,
-      description: `[AI 自动导入] 原始描述: ${item.progressDesc || '无'}`,
+      source: '批量导入',
+      totalPrice: item.totalPrice,
+      description: item.progressDesc,
     }));
     
     onImport(newOrders);
@@ -114,108 +159,108 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
       >
         <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-[#3A5A40] text-white rounded-2xl shadow-lg animate-pulse"><Wand2 className="w-5 h-5" /></div>
+            <div className="p-3 bg-[#3A5A40] text-white rounded-2xl shadow-lg"><Wand2 className="w-5 h-5" /></div>
             <div>
-              <h3 className="text-xl font-bold text-[#2D3A30] tracking-tight">AI 截图排单助手</h3>
-              <p className="text-[10px] text-[#4F6D58] font-black uppercase tracking-widest mt-1">Paste, Drop or Upload</p>
+              <h3 className="text-xl font-bold text-[#2D3A30] tracking-tight">智能排单助手</h3>
+              <p className="text-[10px] text-[#4F6D58] font-black uppercase tracking-widest mt-1">支持图片识别与 Excel 自动排单</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-300 hover:text-slate-900 transition-all"><X className="w-6 h-6" /></button>
         </div>
 
         <div className="p-8 space-y-8">
-          {!preview ? (
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className="aspect-[16/9] border-2 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center gap-6 hover:border-[#3A5A40] hover:bg-[#F2F4F0] transition-all cursor-pointer group relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-slate-50 opacity-50"></div>
-              <div className="p-5 bg-white shadow-xl rounded-3xl text-slate-400 group-hover:scale-110 group-hover:bg-[#3A5A40] group-hover:text-white transition-all z-10">
-                <MousePointerSquareDashed className="w-10 h-10" />
+          {(!preview && parsedData.length === 0) ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="aspect-square border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-4 hover:border-[#3A5A40] hover:bg-[#F2F4F0] transition-all cursor-pointer group"
+              >
+                <div className="p-4 bg-white shadow-md rounded-2xl group-hover:bg-[#3A5A40] group-hover:text-white transition-all">
+                  <Camera className="w-8 h-8" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-bold text-[#2D3A30]">图片识别</p>
+                  <p className="text-[9px] text-slate-400 mt-1">粘贴或拖拽后台截图</p>
+                </div>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
               </div>
-              <div className="text-center z-10">
-                <p className="text-base font-bold text-[#2D3A30]">点击、粘贴(Ctrl+V) 或 拖拽截图</p>
-                <p className="text-[11px] text-[#4F6D58] mt-2 font-medium bg-[#EDF1EE] px-4 py-1 rounded-full border border-[#D1D9D3]">支持米画师、画加等后台截图</p>
+
+              <div 
+                onClick={() => excelInputRef.current?.click()}
+                className="aspect-square border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-4 hover:border-[#3A5A40] hover:bg-[#F2F4F0] transition-all cursor-pointer group"
+              >
+                <div className="p-4 bg-white shadow-md rounded-2xl group-hover:bg-[#3A5A40] group-hover:text-white transition-all text-[#3A5A40]">
+                  <FileSpreadsheet className="w-8 h-8" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-bold text-[#2D3A30]">Excel/CSV 导入</p>
+                  <p className="text-[9px] text-slate-400 mt-1">自动识别表头并排单</p>
+                </div>
+                <input type="file" ref={excelInputRef} onChange={handleFileChange} className="hidden" accept=".xlsx,.xls,.csv" />
               </div>
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
             </div>
           ) : (
             <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-              {/* 图片预览与扫描动效 */}
-              <div className="relative h-56 rounded-3xl overflow-hidden border border-slate-200 shadow-inner group">
-                <img src={preview} className={`w-full h-full object-cover transition-all duration-700 ${loading ? 'blur-sm grayscale' : ''}`} />
-                {loading && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#3A5A40]/10">
-                    {/* 扫描激光线 */}
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#A3B18A] to-transparent shadow-[0_0_15px_#A3B18A] animate-[scan_2s_linear_infinite]"></div>
-                    <Loader2 className="w-10 h-10 text-[#3A5A40] animate-spin mb-4" />
-                    <p className="text-sm font-black text-[#2D3A30] animate-pulse tracking-widest uppercase">AI 深度分析中...</p>
-                  </div>
-                )}
-                {!loading && (
-                  <div className="absolute top-4 right-4 bg-emerald-500 text-white px-3 py-1 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3 h-3" /> 识图完成
-                  </div>
-                )}
-              </div>
+              {preview && (
+                <div className="relative h-40 rounded-3xl overflow-hidden border border-slate-200 shadow-inner group">
+                  <img src={preview} className={`w-full h-full object-cover transition-all duration-700 ${loading ? 'blur-sm grayscale' : ''}`} />
+                  {loading && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#3A5A40]/10">
+                      <Loader2 className="w-8 h-8 text-[#3A5A40] animate-spin mb-2" />
+                      <p className="text-[10px] font-black text-[#2D3A30] tracking-widest uppercase">AI 分析中...</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
-              {/* 解析结果列表 */}
+              {loading && !preview && (
+                 <div className="h-40 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-10 h-10 text-[#3A5A40] animate-spin" />
+                    <p className="text-[10px] font-black text-[#2D3A30] tracking-widest uppercase">表格解析中...</p>
+                 </div>
+              )}
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-2">
-                  <h4 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-[0.2em]">解析到的企划列表 ({parsedData.length})</h4>
-                  {parsedData.length > 0 && <span className="text-[9px] text-slate-400 font-bold">点击条目可进行微调（开发中）</span>}
+                  <h4 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-[0.2em]">待导入列表 ({parsedData.length})</h4>
                 </div>
                 
                 <div className="max-h-60 overflow-y-auto custom-scrollbar space-y-2.5 pr-2">
                   {parsedData.length > 0 ? (
                     parsedData.map((item, i) => (
-                      <div key={i} className="group flex items-center gap-4 p-5 bg-[#F2F4F0] rounded-3xl border border-transparent hover:border-[#3A5A40] transition-all">
-                        <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-[#3A5A40] font-black text-xs shadow-sm">
-                          {i + 1}
-                        </div>
+                      <div key={i} className="group flex items-center gap-4 p-4 bg-[#F2F4F0] rounded-2xl border border-transparent hover:border-[#3A5A40] transition-all">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="text-[13px] font-bold text-[#2D3A30] truncate">{item.title}</p>
-                            <Edit3 className="w-3 h-3 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                          <p className="text-[10px] text-[#4F6D58] font-medium">截止: <span className="font-bold">{item.deadline}</span> · 进度: {item.progressDesc}</p>
+                          <p className="text-[12px] font-black text-[#2D3A30] truncate">{item.title}</p>
+                          <p className="text-[9px] text-[#4F6D58] font-medium mt-1">截止: {item.deadline}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[14px] font-black text-[#2D3A30]">¥{item.totalPrice}</p>
-                          <p className="text-[8px] text-[#4F6D58] font-black uppercase mt-1">CNY</p>
+                          <p className="text-[13px] font-black text-[#2D3A30]">¥{item.totalPrice}</p>
                         </div>
                       </div>
                     ))
                   ) : !loading ? (
-                    <div className="p-8 text-center bg-amber-50 rounded-3xl border border-amber-100">
+                    <div className="p-8 text-center bg-amber-50 rounded-2xl">
                       <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-3" />
-                      <p className="text-xs font-bold text-amber-800">未能在截图中识别到有效的企划数据。</p>
-                      <p className="text-[10px] text-amber-600 mt-1">请尝试上传包含 企划名称、金额、DDL 的清晰后台页面。</p>
+                      <p className="text-xs font-bold text-amber-800">未发现有效数据。</p>
                     </div>
                   ) : null}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <button onClick={handleReset} className="py-4 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all">取消重来</button>
+                <button onClick={handleReset} className="py-4 bg-slate-50 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all">取消</button>
                 <button 
                   disabled={loading || parsedData.length === 0} 
                   onClick={confirmImport}
-                  className="py-4 bg-[#2D3A30] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-30 flex items-center justify-center gap-2"
+                  className="py-4 bg-[#2D3A30] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-30"
                 >
-                  <Sparkles className="w-4 h-4" /> 确认加入排单库
+                  确认导入
                 </button>
               </div>
             </div>
           )}
         </div>
       </div>
-      <style>{`
-        @keyframes scan {
-          0% { top: 0%; }
-          100% { top: 100%; }
-        }
-      `}</style>
     </div>
   );
 };

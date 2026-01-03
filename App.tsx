@@ -76,17 +76,13 @@ const App: React.FC = () => {
     setEditingOrder(null);
   };
 
-  /**
-   * 统一导入处理
-   * @param mode 'append' (追加), 'merge' (基于版本的合并), 'replace' (清空并替换)
-   */
   const handleImportOrders = (newOrders: Order[], mode: 'append' | 'merge' | 'replace' = 'append') => {
     if (mode === 'replace') {
-      // 全量替换模式：直接清空并应用
+      // 全量替换：彻底清空现有所有状态，防止脏数据残留
       setOrders(newOrders);
+      setPriorityOrderIds([]); // 清空高优列表
       setMergeSummary({ updated: 0, added: newOrders.length, replaced: true });
     } else if (mode === 'merge') {
-      // 智能融合模式
       let updated = 0;
       let added = 0;
       const mergedMap = new Map<string, Order>();
@@ -110,7 +106,6 @@ const App: React.FC = () => {
       setOrders(Array.from(mergedMap.values()));
       setMergeSummary({ updated, added, replaced: false });
     } else {
-      // 标准追加模式
       setOrders([...orders, ...newOrders]);
       setMergeSummary({ updated: 0, added: newOrders.length, replaced: false });
     }
@@ -157,10 +152,10 @@ const App: React.FC = () => {
             <button 
               onClick={() => setIsImportModalOpen(true)}
               className="hidden md:flex items-center gap-2 px-5 py-3 bg-[#EDF1EE] text-[#3A5A40] border border-[#D1D9D3] rounded-xl hover:bg-[#D1D9D3] transition-all group"
-              title="AI 截图排单"
+              title="AI 截图或 Excel 排单"
             >
               <Wand2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-              <span className="font-bold text-[11px] uppercase tracking-widest">AI 识图排单</span>
+              <span className="font-bold text-[11px] uppercase tracking-widest">排单助手</span>
             </button>
 
             <button 
