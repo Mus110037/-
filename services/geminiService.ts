@@ -2,10 +2,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Order, Resource } from "../types";
 
-// Note: Initialization should happen inside functions to ensure the latest process.env.API_KEY is used.
-
 export const optimizeSchedule = async (orders: Order[], resources: Resource[]) => {
-  // Fix: Create client instance right before the request to ensure API key currency.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const prompt = `
@@ -26,7 +23,6 @@ export const optimizeSchedule = async (orders: Order[], resources: Resource[]) =
   `;
 
   try {
-    // Fix: Using gemini-3-pro-preview for complex reasoning and optimization tasks.
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
       contents: prompt,
@@ -49,7 +45,6 @@ export const optimizeSchedule = async (orders: Order[], resources: Resource[]) =
       }
     });
 
-    // Fix: Use the .text property directly and handle potential empty responses safely.
     const result = response.text;
     return result ? JSON.parse(result) : [];
   } catch (error) {
@@ -59,14 +54,12 @@ export const optimizeSchedule = async (orders: Order[], resources: Resource[]) =
 };
 
 export const getSchedulingInsights = async (orders: Order[]) => {
-  // Fix: Create client instance right before the request to ensure API key currency.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-  const prompt = `分析这份订单列表，并为生产主管提供 3 条关键见解或警告。重点关注瓶颈、可能错过的截止日期或资源分配过度。
+  const prompt = `分析这份订单列表，并为生产主管提供 3 条关键见解。重点关注瓶颈、可能错过的截止日期。
   订单数据: ${JSON.stringify(orders)}`;
 
   try {
-    // Fix: Use gemini-3-flash-preview for general text generation and analysis.
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -74,9 +67,55 @@ export const getSchedulingInsights = async (orders: Order[]) => {
         systemInstruction: "你是一位简洁的工业顾问。每条见解请保持在 30 字以内。"
       }
     });
-    // Fix: Access response.text directly (not as a method).
     return response.text || "暂时无法生成见解。";
   } catch (error) {
     return "暂时无法生成见解。";
+  }
+};
+
+/**
+ * 解析米画师截图数据
+ * @param base64Image 图片的 base64 字符串
+ */
+export const parseMihuashiScreenshot = async (base64Image: string) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  const prompt = "请识别这张米画师(Mihuashi)企划列表截图中的所有企划。提取每个企划的：标题(title)、截稿日期(deadline, 格式YYYY-MM-DD)、稿酬总额(totalPrice, 数字)、当前进度描述(progressDesc，如'草稿 20%')。";
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [
+        {
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: base64Image.split(',')[1] || base64Image
+          }
+        },
+        { text: prompt }
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING },
+              deadline: { type: Type.STRING },
+              totalPrice: { type: Type.NUMBER },
+              progressDesc: { type: Type.STRING }
+            },
+            required: ["title", "deadline", "totalPrice", "progressDesc"]
+          }
+        }
+      }
+    });
+
+    const result = response.text;
+    return result ? JSON.parse(result) : [];
+  } catch (error) {
+    console.error("AI 识别企划失败:", error);
+    return [];
   }
 };

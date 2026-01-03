@@ -10,8 +10,9 @@ import CreateOrderModal from './components/CreateOrderModal';
 import SyncModal from './components/SyncModal';
 import SettingsView from './components/SettingsView';
 import SocialShareModal from './components/SocialShareModal';
+import ImportModal from './components/ImportModal';
 import { Order, OrderStatus, DEFAULT_STAGES, DEFAULT_SOURCES, DEFAULT_ART_TYPES, DEFAULT_PERSON_COUNTS, SAMPLE_ORDERS, AppSettings } from './types';
-import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone, CheckCircle2 } from 'lucide-react';
+import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone, CheckCircle2, Zap } from 'lucide-react';
 import { getSchedulingInsights } from './services/geminiService';
 
 const STORAGE_KEY = 'artnexus_orders_v5';
@@ -38,17 +39,15 @@ const App: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   const [syncState, setSyncState] = useState<'active' | 'mobile' | 'manual'>('manual');
   const fileHandleRef = useRef<any>(null);
 
-  // 1. 初始化检测：尝试恢复之前关联的文件句柄
   useEffect(() => {
     const checkFileSupport = async () => {
       if ('showSaveFilePicker' in window) {
-        // 在实际生产中这里可以使用 IndexedDB 存储句柄。
-        // 为了演示和当前环境稳定性，我们通过 localStorage 标记并在 SyncModal 中让用户激活。
         const hasLinked = localStorage.getItem('artnexus_linked_active');
         if (hasLinked) setSyncState('active');
       } else {
@@ -58,15 +57,11 @@ const App: React.FC = () => {
     checkFileSupport();
   }, []);
 
-  // 2. 自动保存与快照
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
-    
-    // 如果处于自动同步状态，通知 SyncModal 写入（通过自定义事件或 Ref 交互）
     if (syncState === 'active') {
       window.dispatchEvent(new CustomEvent('artnexus_auto_save', { detail: orders }));
     }
-
     const timer = setTimeout(() => {
       const savedSnapshots = localStorage.getItem(SNAPSHOT_KEY);
       let snaps = savedSnapshots ? JSON.parse(savedSnapshots) : [];
@@ -79,7 +74,6 @@ const App: React.FC = () => {
       if (snaps.length > 5) snaps.shift();
       localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snaps));
     }, 2000);
-
     return () => clearTimeout(timer);
   }, [orders, syncState]);
 
@@ -105,6 +99,10 @@ const App: React.FC = () => {
       setOrders([...orders, orderWithTime]);
     }
     setEditingOrder(null);
+  };
+
+  const handleImportOrders = (newOrders: Order[]) => {
+    setOrders([...orders, ...newOrders]);
   };
 
   const handleStartEdit = (order: Order) => {
@@ -152,7 +150,7 @@ const App: React.FC = () => {
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-1 p-4 md:p-10 pb-24 lg:pb-10 overflow-y-auto custom-scrollbar">
-        <header className="flex items-center justify-between mb-8">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
                {syncState === 'active' ? (
@@ -182,6 +180,13 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex-1 md:flex-none p-3 bg-white text-[#3A5A40] border border-[#E2E8E4] rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#EDF1EE] transition-all shadow-sm"
+            >
+              <Zap className="w-4 h-4" /> 
+              <span>米画师同步</span>
+            </button>
             <button onClick={() => setIsSocialModalOpen(true)} className="p-3 bg-white text-[#4F6D58] border border-[#E2E8E4] rounded-xl hover:text-[#2D3A30] transition-all shadow-sm">
               <Share2 className="w-4 h-4" /> 
             </button>
@@ -216,6 +221,7 @@ const App: React.FC = () => {
       />
       <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={setOrders} />
       <SocialShareModal isOpen={isSocialModalOpen} onClose={() => setIsSocialModalOpen(false)} orders={orders} />
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={handleImportOrders} />
     </div>
   );
 };

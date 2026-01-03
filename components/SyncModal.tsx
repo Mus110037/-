@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Download, Upload, CheckCircle2, Cloud, ChevronRight, Link2, Smartphone, History, ShieldAlert } from 'lucide-react';
+import { X, Download, Upload, CheckCircle2, Cloud, ChevronRight, Link2, Smartphone, History, ShieldAlert, Share } from 'lucide-react';
 import { Order } from '../types';
 
 interface SyncModalProps {
@@ -20,6 +20,8 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
   // 环境检测
   const isSandboxed = window.self !== window.top;
   const supportsFileSystemAPI = 'showSaveFilePicker' in window;
+  const supportsShare = typeof navigator.share !== 'undefined';
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   // 监听全局自动保存事件
   useEffect(() => {
@@ -60,28 +62,30 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
   const handleLinkFile = async () => {
     setError(null);
     
+    // 如果是手机端或不支持 FileSystem API
     if (!supportsFileSystemAPI) {
-      handleQuickExport();
+      if (isMobile && supportsShare) {
+        handleMobileShare();
+      } else {
+        handleQuickExport();
+      }
       return;
     }
 
     try {
       if (isSandboxed) throw new Error("SandboxRestricted");
-      
-      // 这里的逻辑：开启时尝试读取，同时也作为保存句柄
       const [handle] = await (window as any).showOpenFilePicker({
         types: [{ description: '艺策数据文件', accept: { 'application/json': ['.json'] } }],
         multiple: false
       });
 
-      // 尝试读取最新内容
       const file = await handle.getFile();
       const content = await file.text();
       if (content && onImportOrders) {
         try {
           onImportOrders(JSON.parse(content));
         } catch (e) {
-          console.warn("File content invalid, but handle linked");
+          console.warn("File content invalid");
         }
       }
 
@@ -90,8 +94,26 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
       showToastAndClose("文件已关联并同步最新内容");
     } catch (err: any) {
       if (err.name !== 'AbortError') {
-        setError({ title: "关联失败", msg: "无法建立文件连接。请确保浏览器已授权。" });
+        setError({ title: "关联失败", msg: "无法建立连接。由于系统安全限制，移动端请使用一键备份功能。" });
       }
+    }
+  };
+
+  // 针对 iPhone 的优化：一键分享/存入 iCloud
+  const handleMobileShare = async () => {
+    const dataStr = JSON.stringify(orders, null, 2);
+    const fileName = `artnexus_backup_${new Date().toISOString().split('T')[0]}.json`;
+    const file = new File([dataStr], fileName, { type: 'application/json' });
+
+    try {
+      await navigator.share({
+        files: [file],
+        title: '艺策企划备份',
+        text: '这是您的最新企划排期备份文件。'
+      });
+      showToastAndClose("已导出至分享菜单");
+    } catch (err) {
+      handleQuickExport(); // 回退到普通下载
     }
   };
 
@@ -117,7 +139,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
               <Cloud className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[#2D3A30] tracking-tight">同步设置</h2>
+              <h2 className="text-xl font-bold text-[#2D3A30] tracking-tight">同步与备份</h2>
               <p className="text-[10px] text-[#4F6D58] font-black uppercase tracking-widest mt-1">Data & Sync Settings</p>
             </div>
           </div>
@@ -142,18 +164,22 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
           )}
 
           <div className="space-y-3">
-            <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest px-1">数据同步</h3>
+            <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest px-1">数据云存 (iPhone/PC)</h3>
             <button 
               onClick={handleLinkFile}
-              className={`w-full flex items-center justify-between p-6 rounded-3xl transition-all group shadow-lg ${!supportsFileSystemAPI ? 'bg-[#4F6D58] text-white' : 'bg-[#2D3A30] text-white'}`}
+              className={`w-full flex items-center justify-between p-6 rounded-3xl transition-all group shadow-lg ${!supportsFileSystemAPI ? 'bg-[#3A5A40] text-white' : 'bg-[#2D3A30] text-white'}`}
             >
               <div className="flex items-center gap-4 text-left">
                 <div className="p-3 bg-white/20 rounded-2xl">
-                  {supportsFileSystemAPI ? <Link2 className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}
+                  {supportsFileSystemAPI ? <Link2 className="w-5 h-5" /> : <Share className="w-5 h-5" />}
                 </div>
                 <div>
-                  <p className="font-bold text-sm tracking-tight">{supportsFileSystemAPI ? '关联本地文件' : '立即导出备份'}</p>
-                  <p className="text-[9px] text-white/60 mt-0.5 font-medium">关联后修改将自动保存，开启时自动读取</p>
+                  <p className="font-bold text-sm tracking-tight">
+                    {supportsFileSystemAPI ? '关联本地文件 (PC推荐)' : '一键备份至 iCloud/网盘'}
+                  </p>
+                  <p className="text-[9px] text-white/60 mt-0.5 font-medium">
+                    {supportsFileSystemAPI ? '开启时自动读取最新文件' : '由于系统限制，iPhone需点击此按钮存入云盘'}
+                  </p>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 opacity-30 group-hover:translate-x-1" />
@@ -186,7 +212,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
 
           <div className="grid grid-cols-2 gap-3 pt-2">
              <button onClick={() => fileInputRef.current?.click()} className="p-4 bg-white border border-[#E2E8E4] rounded-2xl text-[10px] font-bold text-[#4F6D58] hover:text-[#2D3A30] flex items-center justify-center gap-2">
-                <Upload className="w-3 h-3" /> 载入文件
+                <Upload className="w-3 h-3" /> 载入本地
                 <input type="file" ref={fileInputRef} onChange={e => {
                   const file = e.target.files?.[0];
                   if (file) {
