@@ -15,7 +15,6 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [showClipboardInput, setShowClipboardInput] = useState(false);
   const [clipboardValue, setClipboardValue] = useState('');
-  const [isLowercasedWarning, setIsLowercasedWarning] = useState(false);
 
   const supportsShare = typeof navigator.share !== 'undefined';
 
@@ -51,7 +50,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
   const handleCopyToClipboard = () => {
     const finalToken = getSyncToken();
     navigator.clipboard.writeText(finalToken).then(() => {
-      alert("同步口令已复制！\n\n小贴士：粘贴时请确保大小写不被系统修改。");
+      alert("同步口令已复制！\n\n注意：此口令包含完整数据。导入端将以此覆盖当前所有企划。");
     }).catch(err => {
       prompt("请手动复制口令：", finalToken);
     });
@@ -68,7 +67,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
       await navigator.share({ 
         files: [file], 
         title: '艺策同步口令',
-        text: '使用 AirDrop 传送此文件可避免粘贴时的大写变小写问题。'
+        text: '使用此口令可将此设备的数据全量迁移/同步至另一台设备。'
       });
     } catch (err) {
       console.log("分享已取消");
@@ -85,18 +84,20 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
     }
 
     const encodedPart = match[1].replace(/[\s\n\r]/g, '');
-    const hasUpperCase = /[A-Z]/.test(encodedPart);
 
     try {
       const decodedData = safeAtob(encodedPart);
       if (!decodedData) throw new Error("Decode Failed");
 
       const parsedOrders = JSON.parse(decodedData);
-      // 口令同步通常用于设备间协作，使用 'merge' 模式
-      onImportOrders?.(parsedOrders, 'merge');
-      showToastAndClose("数据同步完成！");
-      setClipboardValue('');
-      setShowClipboardInput(false);
+      
+      // 用户反馈：需要同步后完全一致，因此这里改为 'replace' 模式
+      if(confirm("导入口令将清空当前设备的所有企划并替换为同步内容，确定继续吗？")) {
+        onImportOrders?.(parsedOrders, 'replace');
+        showToastAndClose("跨设备同步已完成！");
+        setClipboardValue('');
+        setShowClipboardInput(false);
+      }
     } catch (e) {
       alert("解析失败，请确保复制了完整的口令。");
     }
@@ -140,30 +141,30 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
           )}
 
           <div className="space-y-4">
-            <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest px-1 flex items-center gap-2">
-              <Zap className="w-3 h-3 text-amber-500 fill-amber-500" /> 极速口令同步 (合并)
-            </h3>
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest flex items-center gap-2">
+                <GitMerge className="w-3 h-3 text-amber-500" /> 设备间全量同步 (口令)
+              </h3>
+              <span className="px-2 py-0.5 bg-rose-50 text-rose-600 text-[8px] font-black rounded uppercase">覆盖模式</span>
+            </div>
             
             <div className="grid grid-cols-2 gap-3">
               <button onClick={handleCopyToClipboard} className="flex flex-col items-center gap-2 p-5 bg-amber-50 border border-amber-100 rounded-3xl hover:bg-amber-100 transition-all group">
                 <Copy className="w-5 h-5 text-amber-600" />
-                <span className="text-[10px] font-bold text-amber-900">生成口令</span>
+                <span className="text-[10px] font-bold text-amber-900">生成同步口令</span>
               </button>
               <button onClick={handleShareTokenAsFile} className="flex flex-col items-center gap-2 p-5 bg-[#3A5A40] text-white rounded-3xl shadow-md active:scale-95 transition-all">
                 <Share2 className="w-5 h-5" />
-                <span className="text-[10px] font-bold">AirDrop 文件</span>
+                <span className="text-[10px] font-bold">AirDrop 导出</span>
               </button>
             </div>
 
             <button 
-              onClick={() => {
-                setShowClipboardInput(!showClipboardInput);
-                setIsLowercasedWarning(false);
-              }} 
+              onClick={() => setShowClipboardInput(!showClipboardInput)} 
               className="w-full py-4 bg-white border border-slate-200 rounded-2xl text-slate-600 hover:border-amber-400 transition-all flex items-center justify-center gap-2"
             >
               <ClipboardPaste className="w-4 h-4" />
-              <span className="text-[11px] font-bold">导入同步口令</span>
+              <span className="text-[11px] font-bold">从另一台设备导入数据</span>
             </button>
             
             {showClipboardInput && (
@@ -190,12 +191,17 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                   onChange={e => setClipboardValue(e.target.value)}
                 />
 
+                <div className="p-3 bg-amber-100/50 rounded-xl flex items-start gap-2">
+                  <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-[8px] font-bold text-amber-800 leading-normal">警告：此操作将清空当前工作区，以口令中的数据为准。建议在操作前先备份当前数据。</p>
+                </div>
+
                 <button 
                   onClick={() => processImportToken(clipboardValue)} 
                   disabled={!clipboardValue.trim()}
                   className="w-full py-4 bg-[#2D3A30] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all disabled:opacity-30"
                 >
-                  解析并合并数据
+                  确认覆盖并同步
                 </button>
               </div>
             )}
@@ -205,15 +211,15 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
 
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest">全量数据恢复 (替换)</h3>
-              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[8px] font-black rounded uppercase">清空现有内容</span>
+              <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest">文件级备份 (JSON)</h3>
+              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[8px] font-black rounded uppercase">手动归档</span>
             </div>
             <div className="grid grid-cols-1 gap-3">
               <button onClick={async () => {
                 const dataStr = JSON.stringify(orders, null, 2);
                 const file = new File([dataStr], generateFileName(), { type: 'application/json' });
                 if (supportsShare) {
-                  try { await navigator.share({ files: [file], title: '全量备份' }); showToastAndClose("已发送"); } catch (e) {}
+                  try { await navigator.share({ files: [file], title: '全量备份' }); showToastAndClose("备份已发送"); } catch (e) {}
                 } else {
                   const blob = new Blob([dataStr], { type: 'application/json' });
                   const url = URL.createObjectURL(blob);
@@ -226,8 +232,8 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                 <div className="flex items-center gap-4">
                   <div className="p-2.5 bg-[#F2F4F0] group-hover:bg-[#3A5A40] group-hover:text-white rounded-xl transition-colors"><Download className="w-4 h-4" /></div>
                   <div className="text-left">
-                    <span className="font-bold text-xs block">生成全量备份文件</span>
-                    <span className="text-[8px] opacity-50 block uppercase tracking-tighter">下载当前所有企划</span>
+                    <span className="font-bold text-xs block">导出备份文件</span>
+                    <span className="text-[8px] opacity-50 block uppercase tracking-tighter">下载 JSON 数据到本地</span>
                   </div>
                 </div>
                 <ChevronRight className="w-4 h-4 opacity-30" />
@@ -244,8 +250,8 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                 <div className="flex items-center gap-4">
                   <div className="p-2.5 bg-[#F2F4F0] group-hover:bg-amber-500 group-hover:text-white rounded-xl transition-colors"><Upload className="w-4 h-4" /></div>
                   <div className="text-left">
-                    <span className="font-bold text-xs block">载入备份文件 (替换式)</span>
-                    <span className="text-[8px] text-amber-600 font-bold block uppercase tracking-tighter">清空并恢复至此文件状态</span>
+                    <span className="font-bold text-xs block">载入备份文件</span>
+                    <span className="text-[8px] text-amber-600 font-bold block uppercase tracking-tighter">覆盖当前状态</span>
                   </div>
                 </div>
                 <input type="file" ref={fileInputRef} onChange={e => {
@@ -255,9 +261,8 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                     reader.onload = (ev) => {
                        try {
                          const data = JSON.parse(ev.target?.result as string);
-                         // 备份恢复使用 'replace' 模式，清空现有数据
                          onImportOrders?.(data, 'replace');
-                         showToastAndClose("数据已全量替换");
+                         showToastAndClose("备份恢复完成");
                        } catch(e) { alert("文件解析失败，请确保是有效的 JSON 备份文件。"); }
                     };
                     reader.readAsText(file);
