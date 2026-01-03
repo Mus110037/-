@@ -66,12 +66,13 @@ const App: React.FC = () => {
       const savedSnapshots = localStorage.getItem(SNAPSHOT_KEY);
       let snaps = savedSnapshots ? JSON.parse(savedSnapshots) : [];
       const newSnap = {
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         data: orders
       };
+      // 只有内容真的变了才存快照
       if (snaps.length > 0 && JSON.stringify(snaps[snaps.length - 1].data) === JSON.stringify(orders)) return;
       snaps.push(newSnap);
-      if (snaps.length > 5) snaps.shift();
+      if (snaps.length > 10) snaps.shift(); // 增加到10条历史记录
       localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snaps));
     }, 2000);
     return () => clearTimeout(timer);
@@ -101,8 +102,16 @@ const App: React.FC = () => {
     setEditingOrder(null);
   };
 
-  const handleImportOrders = (newOrders: Order[]) => {
-    setOrders([...orders, ...newOrders]);
+  const handleImportOrders = (newOrders: Order[], merge: boolean = false) => {
+    if (merge) {
+      // 智能合并：以 ID 为准，如果有重复的，以新导入的为准
+      const mergedMap = new Map();
+      orders.forEach(o => mergedMap.set(o.id, o));
+      newOrders.forEach(o => mergedMap.set(o.id, o));
+      setOrders(Array.from(mergedMap.values()));
+    } else {
+      setOrders(newOrders);
+    }
   };
 
   const handleStartEdit = (order: Order) => {
@@ -219,9 +228,9 @@ const App: React.FC = () => {
         initialOrder={editingOrder}
         settings={settings}
       />
-      <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={setOrders} />
+      <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={handleImportOrders} />
       <SocialShareModal isOpen={isSocialModalOpen} onClose={() => setIsSocialModalOpen(false)} orders={orders} />
-      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={handleImportOrders} />
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, true)} />
     </div>
   );
 };
