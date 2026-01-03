@@ -63,21 +63,21 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
             <div className="bg-[#2D3A30] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[160px]">
               <div className="flex justify-between items-start relative z-10">
                 <div className="p-3 bg-white/10 rounded-xl backdrop-blur-md"><Wallet className="w-5 h-5 text-[#A3B18A]" /></div>
-                <span className="text-[9px] font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full border border-white/10">秋收汇报 (实收)</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full border border-white/10">实收金额 (扣费后)</span>
               </div>
               <div className="relative z-10">
                 <p className="text-3xl font-black tracking-tighter">¥{monthlyActual.toLocaleString()}</p>
-                <p className="text-[#A3B18A] text-[10px] mt-1 font-bold uppercase tracking-widest">森林成长值: {((monthlyActual/monthlyProjected)*100 || 0).toFixed(1)}%</p>
+                <p className="text-[#A3B18A] text-[10px] mt-1 font-bold uppercase tracking-widest">总体完成率: {((monthlyActual/monthlyProjected)*100 || 0).toFixed(1)}%</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white p-6 rounded-[2.5rem] border border-[#E2E8E4] shadow-sm flex flex-col justify-center items-center text-center">
                  <div className="text-3xl font-black text-[#2D3A30]">{orders.filter(o => getStageConfig(o).progress < 100).length}</div>
-                 <p className="text-[9px] text-[#4F6D58] font-bold uppercase tracking-widest mt-1">播种中</p>
+                 <p className="text-[9px] text-[#4F6D58] font-bold uppercase tracking-widest mt-1">正在进行</p>
               </div>
               <div className="bg-[#EDF1EE] p-6 rounded-[2.5rem] border border-[#D1D9D3] shadow-sm flex flex-col justify-center items-center text-center">
                  <div className="text-3xl font-black text-[#2D3A30] opacity-30">{orders.filter(o => getStageConfig(o).progress === 100).length}</div>
-                 <p className="text-[9px] text-[#4F6D58] font-bold uppercase tracking-widest mt-1">已收获</p>
+                 <p className="text-[9px] text-[#4F6D58] font-bold uppercase tracking-widest mt-1">已经完成</p>
               </div>
             </div>
           </div>
@@ -88,7 +88,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
           <div key="upcoming" className={`${baseClass}`}>
             <div className="p-6 border-b border-[#E2E8E4] flex items-center gap-3">
               <CalendarIcon className="w-4 h-4 text-[#3A5A40]" />
-              <h3 className="font-bold text-[#2D3A30] text-sm uppercase tracking-tight">近期收获 DDL</h3>
+              <h3 className="font-bold text-[#2D3A30] text-sm uppercase tracking-tight">即将到期企划</h3>
             </div>
             <div className="p-2">
               {upcomingOrders.length > 0 ? (
@@ -116,7 +116,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                     );
                   })}
                 </div>
-              ) : <div className="py-12 text-center text-[10px] text-[#4F6D58] font-bold uppercase tracking-widest">森之静谧，暂无任务</div>}
+              ) : <div className="py-12 text-center text-[10px] text-[#4F6D58] font-bold uppercase tracking-widest">暂无紧迫企划</div>}
             </div>
           </div>
         );
@@ -127,10 +127,10 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
             <div className="p-6 border-b border-[#E2E8E4] flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="w-4 h-4 text-[#3A5A40] fill-[#3A5A40]">★</span>
-                <h3 className="font-bold text-[#2D3A30] text-sm uppercase tracking-tight">森之守望 (高优)</h3>
+                <h3 className="font-bold text-[#2D3A30] text-sm uppercase tracking-tight">高优先级企划</h3>
               </div>
               <button onClick={() => setIsManagingPriority(!isManagingPriority)} className="text-[9px] font-bold text-[#3A5A40] uppercase tracking-widest bg-[#EDF1EE] px-4 py-2 rounded-xl border border-[#D1D9D3] hover:bg-[#D1D9D3] transition-all">
-                {isManagingPriority ? '完成' : '调整权重'}
+                {isManagingPriority ? '完成' : '调整排序'}
               </button>
             </div>
             <div className="p-4">
@@ -161,7 +161,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                         </div>
                         <div className="flex justify-between items-start mb-4 pl-2">
                            <h4 className="font-bold text-[#2D3A30] text-sm truncate w-2/3">{o.title}</h4>
-                           <span className="px-2 py-1 bg-[#4F6D58] text-white text-[8px] font-bold rounded-lg shrink-0 uppercase tracking-tighter">Level {idx + 1}</span>
+                           <span className="px-2 py-1 bg-[#4F6D58] text-white text-[8px] font-bold rounded-lg shrink-0 uppercase tracking-tighter">Rank {idx + 1}</span>
                         </div>
                         <div className="flex items-center gap-4 pl-2">
                            <div className="flex-1 h-2 bg-[#F2F4F0] rounded-full overflow-hidden">
@@ -173,7 +173,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                     );
                   })}
                 </div>
-              ) : <div className="py-16 text-center text-[#D1D9D3] font-bold text-[10px] uppercase tracking-widest">空旷的林间...</div>}
+              ) : <div className="py-16 text-center text-[#D1D9D3] font-bold text-[10px] uppercase tracking-widest">暂无高优企划</div>}
             </div>
           </div>
         );

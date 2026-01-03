@@ -13,8 +13,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     { id: 'calendar', label: '创作日历', icon: Calendar },
     { id: 'orders', label: '企划库', icon: ListTodo },
     { id: 'finance', label: '财务看板', icon: Wallet },
-    { id: 'ai-assistant', label: 'AI 创意助手', icon: Bot },
-    { id: 'settings', label: '自定义工作区', icon: Settings },
+    { id: 'ai-assistant', label: 'AI 助手', icon: Bot },
+    { id: 'settings', label: '设置', icon: Settings },
   ];
 
   return (
@@ -26,7 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-extrabold tracking-tight text-[#2D3A30]">艺策 ArtNexus</span>
-            <span className="text-[8px] text-[#4F6D58] font-black uppercase tracking-[0.25em] mt-0.5">Forest Rhythm</span>
+            <span className="text-[8px] text-[#4F6D58] font-black uppercase tracking-[0.25em] mt-0.5">Management Pro</span>
           </div>
         </div>
       </div>
@@ -53,10 +53,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
       
       <div className="p-6 mt-auto">
         <div className="bg-[#EDF1EE] p-5 rounded-2xl border border-[#D1D9D3]">
-          <p className="text-[9px] font-black text-[#4F6D58] uppercase tracking-widest mb-1.5">Forest Vibe</p>
+          <p className="text-[9px] font-black text-[#4F6D58] uppercase tracking-widest mb-1.5">System Status</p>
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-[#3A5A40] rounded-full animate-pulse shadow-[0_0_5px_rgba(58,90,64,0.5)]"></div>
-            <p className="text-[10px] text-[#2D3A30] font-extrabold tracking-wide">同步：自然韵律就绪</p>
+            <div className="w-1.5 h-1.5 bg-[#3A5A40] rounded-full animate-pulse"></div>
+            <p className="text-[10px] text-[#2D3A30] font-extrabold tracking-wide">云同步就绪</p>
           </div>
         </div>
       </div>

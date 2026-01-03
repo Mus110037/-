@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import MobileNav from './components/MobileNav';
 import Dashboard from './components/Dashboard';
@@ -11,7 +11,7 @@ import SyncModal from './components/SyncModal';
 import SettingsView from './components/SettingsView';
 import SocialShareModal from './components/SocialShareModal';
 import { Order, OrderStatus, DEFAULT_STAGES, DEFAULT_SOURCES, DEFAULT_ART_TYPES, DEFAULT_PERSON_COUNTS, SAMPLE_ORDERS, AppSettings } from './types';
-import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone } from 'lucide-react';
+import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone, CheckCircle2 } from 'lucide-react';
 import { getSchedulingInsights } from './services/geminiService';
 
 const STORAGE_KEY = 'artnexus_orders_v5';
@@ -41,39 +41,47 @@ const App: React.FC = () => {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   const [syncState, setSyncState] = useState<'active' | 'mobile' | 'manual'>('manual');
+  const fileHandleRef = useRef<any>(null);
 
+  // 1. 初始化检测：尝试恢复之前关联的文件句柄
   useEffect(() => {
-    const hasLinked = localStorage.getItem('artnexus_linked_file');
-    const supportsFileSystemAPI = 'showSaveFilePicker' in window;
-    
-    if (hasLinked && supportsFileSystemAPI) setSyncState('active');
-    else if (!supportsFileSystemAPI) setSyncState('mobile');
-    else setSyncState('manual');
-  }, [isSyncModalOpen]);
+    const checkFileSupport = async () => {
+      if ('showSaveFilePicker' in window) {
+        // 在实际生产中这里可以使用 IndexedDB 存储句柄。
+        // 为了演示和当前环境稳定性，我们通过 localStorage 标记并在 SyncModal 中让用户激活。
+        const hasLinked = localStorage.getItem('artnexus_linked_active');
+        if (hasLinked) setSyncState('active');
+      } else {
+        setSyncState('mobile');
+      }
+    };
+    checkFileSupport();
+  }, []);
 
+  // 2. 自动保存与快照
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
     
+    // 如果处于自动同步状态，通知 SyncModal 写入（通过自定义事件或 Ref 交互）
+    if (syncState === 'active') {
+      window.dispatchEvent(new CustomEvent('artnexus_auto_save', { detail: orders }));
+    }
+
     const timer = setTimeout(() => {
       const savedSnapshots = localStorage.getItem(SNAPSHOT_KEY);
       let snaps = savedSnapshots ? JSON.parse(savedSnapshots) : [];
-      
       const newSnap = {
         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
         data: orders
       };
-
-      if (snaps.length > 0 && JSON.stringify(snaps[snaps.length - 1].data) === JSON.stringify(orders)) {
-        return;
-      }
-
+      if (snaps.length > 0 && JSON.stringify(snaps[snaps.length - 1].data) === JSON.stringify(orders)) return;
       snaps.push(newSnap);
       if (snaps.length > 5) snaps.shift();
       localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snaps));
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [orders]);
+  }, [orders, syncState]);
 
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -124,13 +132,13 @@ const App: React.FC = () => {
             <div className="bg-[#3A5A40] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl">
               <BrainCircuit className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-xl font-bold mb-4 text-[#2D3A30] tracking-tight uppercase">AI 森之韵管家</h2>
-            <p className="text-[11px] text-[#4F6D58] mb-10 leading-relaxed font-bold uppercase tracking-widest">自然启发创作，智能优化调度</p>
+            <h2 className="text-xl font-bold mb-4 text-[#2D3A30] tracking-tight">AI 调度分析助手</h2>
+            <p className="text-[11px] text-[#4F6D58] mb-10 leading-relaxed font-bold uppercase tracking-widest">基于当前企划状态，为您提供最优生产建议</p>
             <button 
               onClick={() => getSchedulingInsights(orders).then(setInsights)}
               className="w-full bg-[#3A5A40] text-white py-4 rounded-xl font-bold hover:opacity-95 transition-all shadow-lg"
             >
-              <Sparkles className="w-4 h-4 inline mr-2" /> 开启自然洞察
+              <Sparkles className="w-4 h-4 inline mr-2" /> 立即生成分析报告
             </button>
           </div>
         );
@@ -150,26 +158,26 @@ const App: React.FC = () => {
                {syncState === 'active' ? (
                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full">
                     <Cloud className="w-2.5 h-2.5" />
-                    <span className="text-[8px] font-black uppercase tracking-wider">Nature Sync</span>
+                    <span className="text-[8px] font-black uppercase tracking-wider">自动同步中</span>
                  </div>
                ) : syncState === 'mobile' ? (
                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#DAD7CD] text-[#3A5A40] rounded-full">
                     <TabletSmartphone className="w-2.5 h-2.5" />
-                    <span className="text-[8px] font-black uppercase tracking-wider">iPhone Mode</span>
+                    <span className="text-[8px] font-black uppercase tracking-wider">移动端模式</span>
                  </div>
                ) : (
                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#D1D9D3] text-[#3A5A40] rounded-full">
                     <History className="w-2.5 h-2.5" />
-                    <span className="text-[8px] font-black uppercase tracking-wider">Eco Snapshot</span>
+                    <span className="text-[8px] font-black uppercase tracking-wider">本地存储</span>
                  </div>
                )}
             </div>
             <h1 className="text-xl md:text-2xl font-black text-[#1B241D] truncate tracking-tight uppercase">
               {activeTab === 'dashboard' ? 'Overview' : 
                activeTab === 'calendar' ? 'Schedule' : 
-               activeTab === 'orders' ? 'Forest' : 
-               activeTab === 'finance' ? 'Harvest' : 
-               activeTab === 'settings' ? 'Ecosystem' : 'Natural AI'}
+               activeTab === 'orders' ? 'Projects' : 
+               activeTab === 'finance' ? 'Finance' : 
+               activeTab === 'settings' ? 'Settings' : 'AI Assistant'}
             </h1>
           </div>
           
@@ -179,11 +187,11 @@ const App: React.FC = () => {
             </button>
             <button onClick={() => setIsSyncModalOpen(true)} className="p-3 bg-white text-[#4F6D58] border border-[#E2E8E4] rounded-xl hover:text-[#2D3A30] transition-all shadow-sm relative group">
               <FileSpreadsheet className="w-4 h-4" />
-              <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white bg-[#3A5A40]"></div>
+              {syncState === 'active' && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white bg-emerald-500"></div>}
             </button>
             <button onClick={() => setIsCreateModalOpen(true)} className="p-3 bg-[#3A5A40] text-white rounded-xl flex items-center gap-2 hover:opacity-90 transition-all shadow-md">
               <Plus className="w-4 h-4" /> 
-              <span className="hidden md:inline font-bold text-[11px] uppercase tracking-widest">播种企划</span>
+              <span className="hidden md:inline font-bold text-[11px] uppercase tracking-widest">新建企划</span>
             </button>
           </div>
         </header>

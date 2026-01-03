@@ -57,9 +57,9 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
     
     if (type === 'projected' || type === 'actual' || type === 'rate') {
       const config = {
-        projected: { icon: TrendingUp, color: 'text-[#4F6D58] bg-[#F2F4F0]', label: '生态预估 (扣费后)', val: `¥${projectedRevenue.toLocaleString()}` },
-        actual: { icon: DollarSign, color: 'text-white bg-[#3A5A40]', label: '森林确认入账', val: `¥${actualRevenue.toLocaleString()}` },
-        rate: { icon: Activity, color: 'text-[#3A5A40] bg-[#EDF1EE]', label: '能量转化率', val: `${completionRate.toFixed(1)}%` },
+        projected: { icon: TrendingUp, color: 'text-[#4F6D58] bg-[#F2F4F0]', label: '预计总额 (已扣手续费)', val: `¥${projectedRevenue.toLocaleString()}` },
+        actual: { icon: DollarSign, color: 'text-white bg-[#3A5A40]', label: '实际入账总额', val: `¥${actualRevenue.toLocaleString()}` },
+        rate: { icon: Activity, color: 'text-[#3A5A40] bg-[#EDF1EE]', label: '款项转化率', val: `${completionRate.toFixed(1)}%` },
       }[type];
       
       return (
@@ -88,7 +88,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
         <div key="typeChart" className={`${baseClass} p-10 lg:col-span-1`}>
           <div className="flex items-center gap-3 mb-10">
             <span className="w-5 h-5 text-[#3A5A40]">●</span>
-            <h3 className="text-sm font-bold text-[#2D3A30] uppercase tracking-tight">林地物种产值</h3>
+            <h3 className="text-sm font-bold text-[#2D3A30] uppercase tracking-tight">稿件分类占比</h3>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -109,14 +109,14 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
 
     if (type === 'distChart') {
       const data = [
-        { name: '预想', value: projectedRevenue },
-        { name: '结果', value: actualRevenue }
+        { name: '预计', value: projectedRevenue },
+        { name: '实收', value: actualRevenue }
       ];
       return (
         <div key={type} className={`${baseClass} p-10 lg:col-span-1 min-h-[400px]`}>
            <div className="flex items-center gap-3 mb-10 text-[#2D3A30] uppercase font-bold text-sm">
              <LayoutGrid className="w-5 h-5 text-[#3A5A40]"/>
-             资金流能量图
+             收支对比统计
            </div>
            <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -141,7 +141,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
         <div key={type} className={`${baseClass} p-10 lg:col-span-2 min-h-[400px]`}>
            <div className="flex items-center gap-3 mb-10 text-[#2D3A30] uppercase font-bold text-sm">
              <TrendingUp className="w-5 h-5 text-[#3A5A40]"/>
-             月度生长趋势
+             月度财务趋势
            </div>
            <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
