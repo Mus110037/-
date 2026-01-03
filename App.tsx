@@ -78,9 +78,8 @@ const App: React.FC = () => {
 
   const handleImportOrders = (newOrders: Order[], mode: 'append' | 'merge' | 'replace' = 'append') => {
     if (mode === 'replace') {
-      // 全量替换：彻底清空现有所有状态，防止脏数据残留
       setOrders(newOrders);
-      setPriorityOrderIds([]); // 清空高优列表
+      setPriorityOrderIds([]);
       setMergeSummary({ updated: 0, added: newOrders.length, replaced: true });
     } else if (mode === 'merge') {
       let updated = 0;
@@ -204,7 +203,7 @@ const App: React.FC = () => {
       <CreateOrderModal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setEditingOrder(null); }} onSave={handleSaveOrder} onDelete={handleDeleteOrder} initialOrder={editingOrder} settings={settings} />
       <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={handleImportOrders} />
       <SocialShareModal isOpen={isSocialModalOpen} onClose={() => setIsSocialModalOpen(false)} orders={orders} />
-      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, 'append')} />
+      <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, 'replace')} />
     </div>
   );
 };
