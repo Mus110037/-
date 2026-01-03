@@ -68,7 +68,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const stage = settings.stages.find(s => s.name === formData.progressStage);
-    // Add missing updatedAt property to comply with Order interface
+    // Fix: Added missing 'version' property to comply with the updated Order interface.
     const orderData: Order = {
       id: initialOrder ? initialOrder.id : `o-${Date.now()}`,
       title: formData.title,
@@ -77,6 +77,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
       deadline: formData.deadline,
       createdAt: formData.createdAt,
       updatedAt: new Date().toISOString(),
+      version: initialOrder ? initialOrder.version : 0,
       status: (stage?.progress === 100) ? OrderStatus.COMPLETED : OrderStatus.PENDING,
       progressStage: formData.progressStage,
       commissionType: formData.commissionType,

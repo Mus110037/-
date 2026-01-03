@@ -45,6 +45,7 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
   };
 
   const confirmImport = () => {
+    // Fix: Added missing 'version' and 'updatedAt' properties to comply with the Order interface.
     const newOrders: Order[] = parsedData.map((item, idx) => ({
       id: `mihuashi-${Date.now()}-${idx}`,
       title: item.title,
@@ -52,6 +53,8 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
       duration: 5,
       deadline: item.deadline,
       createdAt: new Date().toISOString().split('T')[0],
+      updatedAt: new Date().toISOString(),
+      version: 1,
       status: OrderStatus.PENDING,
       progressStage: mapProgressToStage(item.progressDesc),
       commissionType: '商用',

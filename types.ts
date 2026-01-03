@@ -37,7 +37,8 @@ export interface Order {
   duration: number;
   deadline: string;
   createdAt: string;
-  updatedAt: string; // 新增：用于判断哪个版本是最新的
+  updatedAt: string;
+  version: number; // 新增：每次修改+1，解决多设备同步时的“谁听谁的”问题
   status: OrderStatus;
   progressStage: string;
   commissionType: CommissionType;
@@ -78,6 +79,7 @@ export const SAMPLE_ORDERS: Order[] = [
     deadline: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
     createdAt: new Date().toISOString().split('T')[0],
     updatedAt: new Date().toISOString(),
+    version: 1,
     status: OrderStatus.PENDING,
     progressStage: '草稿',
     commissionType: '商用',
@@ -85,6 +87,6 @@ export const SAMPLE_ORDERS: Order[] = [
     artType: '全身',
     source: '米画师',
     totalPrice: 2000,
-    description: '示例数据：需要注意背景的氛围感，突出光影。'
+    description: '示例数据：注意背景氛围。'
   }
 ];
