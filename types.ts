@@ -15,10 +15,9 @@ export interface StageConfig {
 
 export interface SourceConfig {
   name: string;
-  fee: number; // 手续费率，如 5 代表 5%
+  fee: number;
 }
 
-// Resource interface added to fix type error in geminiService
 export interface Resource {
   id: string;
   name: string;
@@ -26,7 +25,7 @@ export interface Resource {
 
 export interface AppSettings {
   stages: StageConfig[];
-  sources: SourceConfig[]; // 更新为对象数组
+  sources: SourceConfig[];
   artTypes: string[];
   personCounts: string[];
 }
@@ -38,13 +37,14 @@ export interface Order {
   duration: number;
   deadline: string;
   createdAt: string;
+  updatedAt: string; // 新增：用于判断哪个版本是最新的
   status: OrderStatus;
   progressStage: string;
   commissionType: CommissionType;
   personCount: string;
   artType: string;
   source: string;
-  totalPrice: number; // 这里的 totalPrice 即为用户输入的“金额”
+  totalPrice: number;
   description: string;
 }
 
@@ -77,6 +77,7 @@ export const SAMPLE_ORDERS: Order[] = [
     duration: 7,
     deadline: new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
     createdAt: new Date().toISOString().split('T')[0],
+    updatedAt: new Date().toISOString(),
     status: OrderStatus.PENDING,
     progressStage: '草稿',
     commissionType: '商用',
@@ -85,21 +86,5 @@ export const SAMPLE_ORDERS: Order[] = [
     source: '米画师',
     totalPrice: 2000,
     description: '示例数据：需要注意背景的氛围感，突出光影。'
-  },
-  {
-    id: 'sample-2',
-    title: '示例：双人Q版头像',
-    priority: '中',
-    duration: 3,
-    deadline: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-    createdAt: new Date().toISOString().split('T')[0],
-    status: OrderStatus.PENDING,
-    progressStage: '细化',
-    commissionType: '私用',
-    personCount: '双人',
-    artType: '头像',
-    source: 'QQ',
-    totalPrice: 500,
-    description: '示例数据：可爱风格，糖果色。'
   }
 ];

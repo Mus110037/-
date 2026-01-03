@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Download, Upload, CheckCircle2, Cloud, ChevronRight, Link2, Smartphone, History, ShieldAlert, Share, Trash2 } from 'lucide-react';
+import { X, Download, Upload, CheckCircle2, Cloud, ChevronRight, Link2, Smartphone, History, ShieldAlert, Share, Trash2, GitMerge } from 'lucide-react';
 import { Order } from '../types';
 
 interface SyncModalProps {
@@ -34,7 +34,6 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
     setTimeout(() => { setLastAction(null); onClose(); }, 1500);
   };
 
-  // 生成精确的文件名
   const generateFileName = () => {
     const now = new Date();
     const date = now.toISOString().split('T')[0].replace(/-/g, '');
@@ -48,7 +47,6 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
       else handleQuickExport();
       return;
     }
-    // ... PC端的 FileSystemHandle 逻辑保持不变
   };
 
   const handleMobileShare = async () => {
@@ -62,7 +60,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
         title: '艺策备份',
         text: `版本: ${new Date().toLocaleString()}`
       });
-      showToastAndClose("已导出，请选择“存储到文件”");
+      showToastAndClose("已开启分享，请选择“存储到文件”");
     } catch (err) {
       handleQuickExport();
     }
@@ -76,7 +74,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
     link.href = url;
     link.download = generateFileName();
     link.click();
-    showToastAndClose("副本已准备下载");
+    showToastAndClose("备份副本已下载");
   };
 
   const clearSnapshots = () => {
@@ -95,8 +93,8 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-2xl bg-[#3A5A40] text-white"><Cloud className="w-6 h-6" /></div>
             <div>
-              <h2 className="text-xl font-bold text-[#2D3A30]">同步与备份</h2>
-              <p className="text-[10px] text-[#4F6D58] font-black uppercase tracking-widest mt-1">Data & Snapshots</p>
+              <h2 className="text-xl font-bold text-[#2D3A30]">跨设备同步</h2>
+              <p className="text-[10px] text-[#4F6D58] font-black uppercase tracking-widest mt-1">iCloud & Multi-Device Sync</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-300 hover:text-slate-900"><X className="w-6 h-6" /></button>
@@ -109,18 +107,28 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
             </div>
           )}
 
+          <div className="p-5 bg-blue-50 border border-blue-100 rounded-3xl flex items-start gap-4 text-blue-800">
+            <GitMerge className="w-5 h-5 mt-0.5 shrink-0 text-blue-600" />
+            <div className="space-y-1">
+              <p className="text-[12px] font-black">如何合并 iPad 和 iPhone 数据？</p>
+              <p className="text-[10px] leading-relaxed opacity-80">
+                1. 在一台设备上点击“备份”，通过分享菜单存入 iCloud。<br/>
+                2. 在另一台设备点击“载入”，选择该文件并选“智能合并”。<br/>
+                3. 系统会自动保留两个设备中最新的改动。
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-4">
              <div className="flex justify-between items-end px-1">
-               <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest">外部云端存取</h3>
-               {isMobile && <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">iOS 模式</span>}
+               <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest">导出当前数据</h3>
              </div>
-             
-             <button onClick={handleLinkFile} className="w-full flex items-center justify-between p-6 bg-[#2D3A30] text-white rounded-3xl hover:opacity-90 transition-all shadow-xl group">
+             <button onClick={handleLinkFile} className="w-full flex items-center justify-between p-6 bg-[#2D3A30] text-white rounded-3xl hover:opacity-95 transition-all shadow-xl group">
                 <div className="flex items-center gap-4 text-left">
                   <div className="p-3 bg-white/10 rounded-2xl"><Share className="w-5 h-5" /></div>
                   <div>
-                    <p className="font-bold text-sm">备份至 iCloud/网盘</p>
-                    <p className="text-[9px] text-white/50 mt-0.5">iOS 会生成新副本，请保留最新一份</p>
+                    <p className="font-bold text-sm">备份至 iCloud / 文件夹</p>
+                    <p className="text-[9px] text-white/50 mt-0.5">iOS 会生成新副本，请以此文件同步其他设备</p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 opacity-30 group-hover:translate-x-1" />
@@ -132,7 +140,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
           <div className="space-y-4">
             <div className="flex justify-between items-center px-1">
               <h3 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-widest flex items-center gap-2">
-                <History className="w-3 h-3" /> 本地历史快照 (内部闪回)
+                <History className="w-3 h-3" /> 本地闪回
               </h3>
               {localBackups.length > 0 && (
                 <button onClick={clearSnapshots} className="text-[9px] font-bold text-red-400 hover:text-red-600 flex items-center gap-1">
@@ -142,20 +150,18 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
             </div>
             
             <div className="space-y-2">
-              {localBackups.length > 0 ? localBackups.slice(0, 5).map((snap, i) => (
-                <div key={i} className="group relative">
-                  <button onClick={() => { onImportOrders?.(snap.data, false); showToastAndClose("已从快照恢复"); }} className="w-full flex items-center justify-between p-4 bg-white border border-[#E2E8E4] rounded-2xl hover:border-[#3A5A40] transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#A3B18A]"></div>
-                      <span className="text-[11px] font-bold text-slate-600">{snap.time}</span>
-                      <span className="text-[9px] text-slate-400">({snap.data.length} 条企划)</span>
-                    </div>
-                    <span className="text-[9px] font-black text-[#3A5A40] opacity-0 group-hover:opacity-100 uppercase">立即闪回</span>
-                  </button>
-                </div>
+              {localBackups.length > 0 ? localBackups.slice(0, 3).map((snap, i) => (
+                <button key={i} onClick={() => { onImportOrders?.(snap.data, false); showToastAndClose("已闪回"); }} className="w-full flex items-center justify-between p-4 bg-white border border-[#E2E8E4] rounded-2xl hover:border-[#3A5A40] transition-all group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#A3B18A]"></div>
+                    <span className="text-[11px] font-bold text-slate-600">{snap.time}</span>
+                    <span className="text-[9px] text-slate-400">({snap.data.length} 条)</span>
+                  </div>
+                  <span className="text-[9px] font-black text-[#3A5A40] opacity-0 group-hover:opacity-100 uppercase">载入</span>
+                </button>
               )) : (
-                <div className="p-10 text-center border-2 border-dashed border-slate-100 rounded-[2rem]">
-                  <p className="text-[10px] text-slate-300 font-bold uppercase tracking-[0.2em]">尚无自动保存记录</p>
+                <div className="p-6 text-center border border-dashed border-slate-200 rounded-2xl">
+                  <p className="text-[9px] text-slate-300 font-bold uppercase">无快照</p>
                 </div>
               )}
             </div>
@@ -171,17 +177,17 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
                     reader.onload = (ev) => {
                        try {
                          const data = JSON.parse(ev.target?.result as string);
-                         const merge = confirm("检测到已有数据，是否与当前数据【合并】？\n取消则会【完全替换】现有内容。");
+                         const merge = confirm("【智能合并】模式：\n系统将自动对比 ID，并在有冲突时保留最新修改的版本。\n\n点击“确定”开始合并，点击“取消”将完全替换现有内容。");
                          onImportOrders?.(data, merge);
-                         showToastAndClose(merge ? "已合并数据" : "已替换数据");
-                       } catch(e) { alert("格式无效"); }
+                         showToastAndClose(merge ? "已完成智能合并" : "已完成数据替换");
+                       } catch(e) { alert("文件无效"); }
                     };
                     reader.readAsText(file);
                   }
                 }} className="hidden" />
              </button>
              <button onClick={handleQuickExport} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-bold text-slate-500 hover:text-slate-900 flex items-center justify-center gap-2">
-                <Download className="w-3 h-3" /> 仅下载副本
+                <Download className="w-3 h-3" /> 导出副本
              </button>
           </div>
         </div>

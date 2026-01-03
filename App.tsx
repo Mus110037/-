@@ -43,7 +43,6 @@ const App: React.FC = () => {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   const [syncState, setSyncState] = useState<'active' | 'mobile' | 'manual'>('manual');
-  const fileHandleRef = useRef<any>(null);
 
   useEffect(() => {
     const checkFileSupport = async () => {
@@ -69,10 +68,9 @@ const App: React.FC = () => {
         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         data: orders
       };
-      // 只有内容真的变了才存快照
       if (snaps.length > 0 && JSON.stringify(snaps[snaps.length - 1].data) === JSON.stringify(orders)) return;
       snaps.push(newSnap);
-      if (snaps.length > 10) snaps.shift(); // 增加到10条历史记录
+      if (snaps.length > 10) snaps.shift();
       localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snaps));
     }, 2000);
     return () => clearTimeout(timer);
@@ -93,21 +91,36 @@ const App: React.FC = () => {
   }, [orders]);
 
   const handleSaveOrder = (newOrder: Order) => {
+    const orderWithTimestamp = { ...newOrder, updatedAt: new Date().toISOString() };
     if (editingOrder) {
-      setOrders(orders.map(o => o.id === newOrder.id ? newOrder : o));
+      setOrders(orders.map(o => o.id === newOrder.id ? orderWithTimestamp : o));
     } else {
-      const orderWithTime = { ...newOrder, createdAt: newOrder.createdAt || new Date().toISOString().split('T')[0] };
-      setOrders([...orders, orderWithTime]);
+      const fullOrder = { ...orderWithTimestamp, createdAt: newOrder.createdAt || new Date().toISOString().split('T')[0] };
+      setOrders([...orders, fullOrder]);
     }
     setEditingOrder(null);
   };
 
   const handleImportOrders = (newOrders: Order[], merge: boolean = false) => {
     if (merge) {
-      // 智能合并：以 ID 为准，如果有重复的，以新导入的为准
-      const mergedMap = new Map();
+      // 智能冲突解决合并
+      const mergedMap = new Map<string, Order>();
+      // 先放现有的
       orders.forEach(o => mergedMap.set(o.id, o));
-      newOrders.forEach(o => mergedMap.set(o.id, o));
+      // 遍历新导入的
+      newOrders.forEach(incoming => {
+        const existing = mergedMap.get(incoming.id);
+        if (existing) {
+          // 如果已存在，对比 updatedAt，保留更晚的
+          const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+          const incomingTime = incoming.updatedAt ? new Date(incoming.updatedAt).getTime() : 1; // 默认新导入稍大
+          if (incomingTime > existingTime) {
+            mergedMap.set(incoming.id, incoming);
+          }
+        } else {
+          mergedMap.set(incoming.id, incoming);
+        }
+      });
       setOrders(Array.from(mergedMap.values()));
     } else {
       setOrders(newOrders);
@@ -127,8 +140,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard': 
-        return <Dashboard orders={orders} priorityOrderIds={priorityOrderIds} onUpdatePriorityIds={setPriorityOrderIds} settings={settings} />;
+      case 'dashboard': return <Dashboard orders={orders} priorityOrderIds={priorityOrderIds} onUpdatePriorityIds={setPriorityOrderIds} settings={settings} />;
       case 'calendar': return <CalendarView orders={orders} onEditOrder={handleStartEdit} settings={settings} />;
       case 'orders': return <OrderList orders={orders} onEditOrder={handleStartEdit} settings={settings} />;
       case 'finance': return <FinanceView orders={orders} settings={settings} />;
@@ -141,10 +153,7 @@ const App: React.FC = () => {
             </div>
             <h2 className="text-xl font-bold mb-4 text-[#2D3A30] tracking-tight">AI 调度分析助手</h2>
             <p className="text-[11px] text-[#4F6D58] mb-10 leading-relaxed font-bold uppercase tracking-widest">基于当前企划状态，为您提供最优生产建议</p>
-            <button 
-              onClick={() => getSchedulingInsights(orders).then(setInsights)}
-              className="w-full bg-[#3A5A40] text-white py-4 rounded-xl font-bold hover:opacity-95 transition-all shadow-lg"
-            >
+            <button onClick={() => getSchedulingInsights(orders).then(setInsights)} className="w-full bg-[#3A5A40] text-white py-4 rounded-xl font-bold hover:opacity-95 transition-all shadow-lg">
               <Sparkles className="w-4 h-4 inline mr-2" /> 立即生成分析报告
             </button>
           </div>
@@ -157,7 +166,6 @@ const App: React.FC = () => {
     <div className="flex min-h-screen bg-[#F2F4F0] text-[#2D3A30]">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
-      
       <main className="flex-1 p-4 md:p-10 pb-24 lg:pb-10 overflow-y-auto custom-scrollbar">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div className="min-w-0">
@@ -180,54 +188,32 @@ const App: React.FC = () => {
                )}
             </div>
             <h1 className="text-xl md:text-2xl font-black text-[#1B241D] truncate tracking-tight uppercase">
-              {activeTab === 'dashboard' ? 'Overview' : 
-               activeTab === 'calendar' ? 'Schedule' : 
-               activeTab === 'orders' ? 'Projects' : 
-               activeTab === 'finance' ? 'Finance' : 
-               activeTab === 'settings' ? 'Settings' : 'AI Assistant'}
+              {activeTab === 'dashboard' ? 'Overview' : activeTab === 'calendar' ? 'Schedule' : activeTab === 'orders' ? 'Projects' : activeTab === 'finance' ? 'Finance' : activeTab === 'settings' ? 'Settings' : 'AI Assistant'}
             </h1>
           </div>
-          
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setIsImportModalOpen(true)}
-              className="flex-1 md:flex-none p-3 bg-white text-[#3A5A40] border border-[#E2E8E4] rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#EDF1EE] transition-all shadow-sm"
-            >
-              <Zap className="w-4 h-4" /> 
-              <span>米画师同步</span>
+            <button onClick={() => setIsImportModalOpen(true)} className="flex-1 md:flex-none p-3 bg-white text-[#3A5A40] border border-[#E2E8E4] rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#EDF1EE] transition-all shadow-sm">
+              <Zap className="w-4 h-4" /> <span>米画师同步</span>
             </button>
-            <button onClick={() => setIsSocialModalOpen(true)} className="p-3 bg-white text-[#4F6D58] border border-[#E2E8E4] rounded-xl hover:text-[#2D3A30] transition-all shadow-sm">
-              <Share2 className="w-4 h-4" /> 
-            </button>
+            <button onClick={() => setIsSocialModalOpen(true)} className="p-3 bg-white text-[#4F6D58] border border-[#E2E8E4] rounded-xl hover:text-[#2D3A30] transition-all shadow-sm"><Share2 className="w-4 h-4" /></button>
             <button onClick={() => setIsSyncModalOpen(true)} className="p-3 bg-white text-[#4F6D58] border border-[#E2E8E4] rounded-xl hover:text-[#2D3A30] transition-all shadow-sm relative group">
               <FileSpreadsheet className="w-4 h-4" />
               {syncState === 'active' && <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white bg-emerald-500"></div>}
             </button>
             <button onClick={() => setIsCreateModalOpen(true)} className="p-3 bg-[#3A5A40] text-white rounded-xl flex items-center gap-2 hover:opacity-90 transition-all shadow-md">
-              <Plus className="w-4 h-4" /> 
-              <span className="hidden md:inline font-bold text-[11px] uppercase tracking-widest">新建企划</span>
+              <Plus className="w-4 h-4" /> <span className="hidden md:inline font-bold text-[11px] uppercase tracking-widest">新建企划</span>
             </button>
           </div>
         </header>
-
         {insights && (
           <div className="mb-8 p-5 bg-white border border-[#E2E8E4] rounded-2xl text-[#2D3A30] flex items-start gap-4 shadow-sm">
             <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-[#3A5A40]" />
             <p className="text-[11px] font-bold leading-relaxed tracking-wide">{insights}</p>
           </div>
         )}
-
         {renderContent()}
       </main>
-
-      <CreateOrderModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => { setIsCreateModalOpen(false); setEditingOrder(null); }} 
-        onSave={handleSaveOrder} 
-        onDelete={handleDeleteOrder} 
-        initialOrder={editingOrder}
-        settings={settings}
-      />
+      <CreateOrderModal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setEditingOrder(null); }} onSave={handleSaveOrder} onDelete={handleDeleteOrder} initialOrder={editingOrder} settings={settings} />
       <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={handleImportOrders} />
       <SocialShareModal isOpen={isSocialModalOpen} onClose={() => setIsSocialModalOpen(false)} orders={orders} />
       <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, true)} />
