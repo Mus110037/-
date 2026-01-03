@@ -20,7 +20,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder }) => {
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
 
-  // 计算本月预估收入 (根据 deadline 在本月的订单)
   const monthlyProjected = orders
     .filter(o => isSameMonth(parseISO(o.deadline), currentDate))
     .reduce((sum, o) => {
@@ -29,30 +28,31 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder }) => {
     }, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
-        <div className="p-8 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
-          <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-bold text-slate-900">{format(currentDate, 'yyyy年 MMMM', { locale: zhCN })}</h2>
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-              <button onClick={prevMonth} className="p-2 hover:bg-white rounded-lg transition-all"><ChevronLeft className="w-5 h-5" /></button>
-              <button onClick={() => setCurrentDate(new Date())} className="px-3 py-1 text-xs font-bold hover:bg-white rounded-lg transition-all">今天</button>
-              <button onClick={nextMonth} className="p-2 hover:bg-white rounded-lg transition-all"><ChevronRight className="w-5 h-5" /></button>
+    <div className="space-y-4">
+      <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
+        {/* 精简头部 */}
+        <div className="px-5 py-4 md:px-8 md:py-6 border-b border-slate-100 flex flex-wrap justify-between items-center gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg md:text-2xl font-black text-slate-900">{format(currentDate, 'yyyy年 MMMM', { locale: zhCN })}</h2>
+            <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg">
+              <button onClick={prevMonth} className="p-1.5 hover:bg-white rounded-md transition-all"><ChevronLeft className="w-4 h-4" /></button>
+              <button onClick={nextMonth} className="p-1.5 hover:bg-white rounded-md transition-all"><ChevronRight className="w-4 h-4" /></button>
             </div>
           </div>
           
-          <div className="bg-violet-50 px-6 py-3 rounded-2xl flex items-center gap-3 border border-violet-100">
-            <Wallet className="w-5 h-5 text-violet-600" />
-            <div>
-              <p className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">本月预计收入</p>
-              <p className="text-lg font-black text-violet-700">¥{monthlyProjected.toLocaleString()}</p>
+          <div className="bg-violet-50 px-3 py-1.5 md:px-5 md:py-3 rounded-xl flex items-center gap-2 border border-violet-100">
+            <Wallet className="w-4 h-4 text-violet-600 shrink-0" />
+            <div className="flex flex-col">
+              <span className="text-[8px] md:text-[10px] font-black text-violet-400 uppercase leading-none mb-0.5">本月预估</span>
+              <span className="text-xs md:text-lg font-black text-violet-700 leading-none">¥{monthlyProjected.toLocaleString()}</span>
             </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-7 gap-px bg-slate-100">
-          {['周一', '周二', '周三', '周四', '周五', '周六', '周日'].map(day => (
-            <div key={day} className="bg-slate-50 p-4 text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+        {/* 日历网格 */}
+        <div className="grid grid-cols-7 gap-px bg-slate-50">
+          {['一', '二', '三', '四', '五', '六', '日'].map(day => (
+            <div key={day} className="bg-white py-2 text-center text-[9px] font-black text-slate-400">
               {day}
             </div>
           ))}
@@ -60,34 +60,32 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder }) => {
             const dayOrders = orders.filter(o => isSameDay(parseISO(o.deadline), day));
             const isToday = isSameDay(day, new Date());
             return (
-              <div key={i} className="bg-white min-h-[140px] p-3 hover:bg-slate-50/50 transition-colors group">
-                <div className="flex justify-between items-start mb-2">
-                   <span className={`text-sm font-black ${isToday ? 'bg-violet-600 text-white w-7 h-7 flex items-center justify-center rounded-lg shadow-lg shadow-violet-200' : 'text-slate-400'}`}>
+              <div key={i} className="bg-white min-h-[70px] md:min-h-[140px] p-1.5 hover:bg-slate-50 transition-colors">
+                <div className="flex justify-center md:justify-start mb-1">
+                   <span className={`text-[10px] md:text-sm font-black w-5 h-5 md:w-7 md:h-7 flex items-center justify-center rounded-md ${isToday ? 'bg-violet-600 text-white shadow-lg shadow-violet-200' : 'text-slate-300'}`}>
                     {format(day, 'd')}
                   </span>
                 </div>
-                <div className="space-y-1.5">
-                  {dayOrders.map(order => {
+                <div className="space-y-1">
+                  {dayOrders.slice(0, 3).map(order => {
                     const prog = STAGE_PROGRESS_MAP[order.progressStage];
                     return (
                       <div 
                         key={order.id} 
                         onClick={() => onEditOrder(order)}
-                        className={`text-[10px] p-2 rounded-xl border truncate cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.98] ${
+                        className={`text-[8px] md:text-[10px] p-1 rounded-md border truncate cursor-pointer transition-all ${
                           prog === 100 
-                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700 shadow-sm' 
-                            : 'bg-white border-slate-100 text-slate-700 shadow-sm hover:border-violet-200'
+                            ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
+                            : 'bg-white border-slate-100 text-slate-700 shadow-sm'
                         }`}
-                        title={`${order.title} (${order.progressStage})`}
                       >
-                        <div className="font-bold truncate">{order.title}</div>
-                        <div className="flex items-center justify-between mt-1 text-[8px] opacity-60">
-                           <span>{order.artType}</span>
-                           <span>{prog}%</span>
-                        </div>
+                        <span className="font-bold truncate block">{order.title}</span>
                       </div>
                     );
                   })}
+                  {dayOrders.length > 3 && (
+                    <div className="text-[7px] text-slate-300 font-bold text-center">+{dayOrders.length - 3}</div>
+                  )}
                 </div>
               </div>
             );
