@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Order, AppSettings } from '../types';
-import { Wallet, Calendar as CalendarIcon, Zap, GripVertical, Tag, Briefcase, User, Users, Clock } from 'lucide-react';
+import { Wallet, Calendar as CalendarIcon, ChevronUp, ChevronDown, Plus, Star, X, Settings2, Trash2, CalendarPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { zhCN } from 'date-fns/locale/zh-CN';
 
@@ -10,210 +10,267 @@ interface DashboardProps {
   priorityOrderIds: string[];
   onUpdatePriorityIds: (ids: string[]) => void;
   onEditOrder: (order: Order) => void;
+  onUpdateOrder: (order: Order) => void;
   settings: AppSettings;
+  onQuickAdd: () => void;
 }
 
-type SectionType = 'upcoming' | 'stats' | 'priority';
-
-const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdatePriorityIds, onEditOrder, settings }) => {
-  const [isManagingPriority, setIsManagingPriority] = useState(false);
-  const [draggedPriorityIdx, setDraggedPriorityIdx] = useState<number | null>(null);
-  const [sectionOrder] = useState<SectionType[]>(() => {
-    const saved = localStorage.getItem('artnexus_dashboard_layout_v5');
-    return saved ? JSON.parse(saved) : ['stats', 'upcoming', 'priority'];
+const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdatePriorityIds, onEditOrder, onUpdateOrder, settings, onQuickAdd }) => {
+  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  
+  const [moduleOrder, setModuleOrder] = useState<string[]>(() => {
+    const saved = localStorage.getItem('artnexus_dashboard_layout');
+    return saved ? JSON.parse(saved) : ['stats', 'priority', 'upcoming'];
   });
+
+  useEffect(() => {
+    localStorage.setItem('artnexus_dashboard_layout', JSON.stringify(moduleOrder));
+  }, [moduleOrder]);
+
+  const moveModule = (index: number, direction: 'up' | 'down') => {
+    const newOrder = [...moduleOrder];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= newOrder.length) return;
+    [newOrder[index], newOrder[targetIdx]] = [newOrder[targetIdx], newOrder[index]];
+    setModuleOrder(newOrder);
+  };
+
+  const handleExportSingleICS = (order: Order, e: React.MouseEvent) => {
+    e.stopPropagation();
+    let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//ArtNexus//Pro//CN\nMETHOD:PUBLISH\n";
+    const deadline = order.deadline.replace(/-/g, '');
+    icsContent += "BEGIN:VEVENT\n";
+    icsContent += `UID:${order.id}@artnexus.pro\n`;
+    icsContent += `DTSTAMP:${format(new Date(), "yyyyMMdd'T'HHmmss'Z'")}\n`;
+    icsContent += `DTSTART;VALUE=DATE:${deadline}\n`;
+    icsContent += `DTEND;VALUE=DATE:${deadline}\n`;
+    icsContent += `SUMMARY:[艺策] ${order.title}\n`;
+    icsContent += `DESCRIPTION:进度: ${order.progressStage}\\n金额: ¥${order.totalPrice}\n`;
+    icsContent += "END:VEVENT\nEND:VCALENDAR";
+    
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.setAttribute('download', `${order.title}_日程.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const getStageConfig = (order: Order) => {
     return settings.stages.find(s => s.name === (order.progressStage || '未开始')) || settings.stages[0];
   };
 
-  const priorityOrders = priorityOrderIds.map(id => orders.find(o => o.id === id)).filter((o): o is Order => !!o);
+  const highPriorityOrdersRaw = orders.filter(o => o.priority === '高' && getStageConfig(o).progress < 100);
+  
+  const sortedPriorityOrders = [...highPriorityOrdersRaw].sort((a, b) => {
+    const idxA = priorityOrderIds.indexOf(a.id);
+    const idxB = priorityOrderIds.indexOf(b.id);
+    if (idxA === -1 && idxB === -1) return 0;
+    if (idxA === -1) return 1;
+    if (idxB === -1) return -1;
+    return idxA - idxB;
+  });
+
+  const movePriorityItem = (idx: number, direction: 'up' | 'down') => {
+    const newIds = sortedPriorityOrders.map(o => o.id);
+    const target = direction === 'up' ? idx - 1 : idx + 1;
+    if (target < 0 || target >= newIds.length) return;
+    [newIds[idx], newIds[target]] = [newIds[target], newIds[idx]];
+    onUpdatePriorityIds(newIds);
+  };
+
+  const removeFromFocus = (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+      onUpdateOrder({ ...order, priority: '中' });
+      onUpdatePriorityIds(priorityOrderIds.filter(id => id !== orderId));
+    }
+  };
 
   const calculateActual = (o: Order) => {
     const source = settings.sources.find(s => s.name === o.source) || { name: o.source, fee: 0 };
     return o.totalPrice * (1 - source.fee / 100);
   };
 
-  const monthlyProjected = orders.reduce((sum, o) => sum + o.totalPrice, 0);
   const monthlyActual = orders.filter(o => getStageConfig(o).progress === 100).reduce((sum, o) => sum + calculateActual(o), 0);
-
   const upcomingOrders = orders
     .filter(o => getStageConfig(o).progress < 100)
     .sort((a, b) => new Date(a.deadline.replace(/-/g, '/')).getTime() - new Date(b.deadline.replace(/-/g, '/')).getTime())
     .slice(0, 5);
 
-  const renderPriorityDot = (priority: Order['priority']) => {
-    const colors = {
-      '高': 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]',
-      '中': 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.4)]',
-      '低': 'bg-slate-300'
-    };
-    return <div className={`w-2.5 h-2.5 rounded-full ${colors[priority]}`} title={`优先级：${priority}`} />;
-  };
+  const nonHighPriorityOrders = orders.filter(o => o.priority !== '高' && getStageConfig(o).progress < 100);
 
-  const handlePriorityDragStart = (idx: number) => setDraggedPriorityIdx(idx);
-
-  const handlePriorityDragOver = (e: React.DragEvent, idx: number) => {
-    e.preventDefault();
-    if (draggedPriorityIdx === null || draggedPriorityIdx === idx) return;
-    const newOrder = [...priorityOrderIds];
-    const item = newOrder[draggedPriorityIdx];
-    newOrder.splice(draggedPriorityIdx, 1);
-    newOrder.splice(idx, 0, item);
-    setDraggedPriorityIdx(idx);
-    onUpdatePriorityIds(newOrder);
-  };
-
-  const renderSection = (type: SectionType) => {
-    const baseClass = `bg-white rounded-[2.5rem] border transition-all duration-300 shadow-sm overflow-hidden border-[#E2E8E4] relative mb-8`;
-    
-    switch (type) {
-      case 'stats':
-        return (
-          <div key="stats" className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="bg-[#2D3A30] p-8 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden flex flex-col justify-between min-h-[180px]">
-              <div className="flex justify-between items-start relative z-10">
-                <div className="p-3 bg-white/10 rounded-xl backdrop-blur-md"><Wallet className="w-5 h-5 text-[#A3B18A]" /></div>
-                <span className="text-[9px] font-bold uppercase tracking-widest bg-white/10 px-3 py-1 rounded-full border border-white/10">实收金额 (扣费后)</span>
-              </div>
-              <div className="relative z-10">
-                <p className="text-4xl font-black tracking-tighter">¥{monthlyActual.toLocaleString()}</p>
-                <p className="text-[#A3B18A] text-[10px] mt-2 font-bold uppercase tracking-widest">总体完成率: {((monthlyActual/monthlyProjected)*100 || 0).toFixed(1)}%</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-6 rounded-[2.5rem] border border-[#E2E8E4] shadow-sm flex flex-col justify-center items-center text-center">
-                 <div className="text-4xl font-black text-[#2D3A30]">{orders.filter(o => getStageConfig(o).progress < 100).length}</div>
-                 <p className="text-[9px] text-[#4F6D58] font-bold uppercase tracking-widest mt-2">正在进行</p>
-              </div>
-              <div className="bg-[#EDF1EE] p-6 rounded-[2.5rem] border border-[#D1D9D3] shadow-sm flex flex-col justify-center items-center text-center">
-                 <div className="text-4xl font-black text-[#2D3A30] opacity-30">{orders.filter(o => getStageConfig(o).progress === 100).length}</div>
-                 <p className="text-[9px] text-[#4F6D58] font-bold uppercase tracking-widest mt-2">已经完成</p>
-              </div>
+  const renderStatsModule = (index: number) => (
+    <div key="stats" className="relative group animate-in fade-in duration-500">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="bg-[#2D3A30] px-6 py-5 rounded-xl text-[#F2F1EA] shadow-md flex items-center justify-between col-span-1 md:col-span-2">
+          <div className="flex items-center gap-4">
+            <div className="p-2.5 bg-white/10 rounded-lg"><Wallet className="w-5 h-5 text-[#A3B18A]" /></div>
+            <div>
+              <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-1">本月预估实收 Revenue</p>
+              <p className="text-3xl font-black tracking-tight">¥{monthlyActual.toLocaleString()}</p>
             </div>
           </div>
-        );
-
-      case 'upcoming':
-        return (
-          <div key="upcoming" className={`${baseClass}`}>
-            <div className="p-7 border-b border-[#E2E8E4] flex items-center gap-3">
-              <CalendarIcon className="w-4 h-4 text-[#3A5A40]" />
-              <h3 className="font-bold text-[#2D3A30] text-sm uppercase tracking-tight">即将到期企划</h3>
-            </div>
-            <div className="p-3">
-              {upcomingOrders.length > 0 ? (
-                <div className="space-y-2">
-                  {upcomingOrders.map(o => {
-                    const stage = getStageConfig(o);
-                    const deadlineDate = new Date(o.deadline.replace(/-/g, '/'));
-                    return (
-                      <div key={o.id} onClick={() => onEditOrder(o)} className="flex items-center gap-5 p-5 hover:bg-[#F2F4F0] rounded-[2rem] transition-all border border-transparent hover:border-[#D1D9D3] cursor-pointer group">
-                        <div className="flex flex-col items-center justify-center w-14 h-14 bg-[#2D3A30] rounded-2xl shrink-0 shadow-lg border border-white/5 transition-transform group-hover:scale-105">
-                          <span className="text-[18px] font-black text-white leading-none tracking-tighter">{format(deadlineDate, 'dd')}</span>
-                          <span className="text-[9px] font-bold text-[#A3B18A] leading-none mt-1.5 uppercase tracking-widest">{format(deadlineDate, 'MMM', { locale: zhCN })}</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-3 mb-2.5">
-                            {renderPriorityDot(o.priority)}
-                            <h4 className="font-black text-[#2D3A30] truncate text-[16px] md:text-[18px] tracking-tight group-hover:text-[#3A5A40] transition-colors">{o.title}</h4>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="w-24 h-2 bg-[#E2E8E4] rounded-full overflow-hidden shrink-0 border border-slate-200">
-                              <div className="h-full transition-all duration-700" style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} />
-                            </div>
-                            <span className="px-2.5 py-1 bg-[#EDF1EE] text-[#3A5A40] text-[9px] font-black rounded-lg border border-[#D1D9D3] uppercase tracking-tighter">
-                              {stage.progress}%
-                            </span>
-                            <span className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[9px] font-bold text-slate-500 flex items-center gap-1.5">
-                              {o.commissionType === '商用' ? <Briefcase className="w-3 h-3 text-amber-500" /> : <User className="w-3 h-3 text-blue-500" />}
-                              {o.commissionType}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0 pr-2">
-                          <span className="text-[16px] font-black text-slate-900">¥{o.totalPrice.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : <div className="py-16 text-center text-[10px] text-[#4F6D58] font-bold uppercase tracking-widest">暂无紧迫企划</div>}
-            </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#FAFAF5] p-4 rounded-xl border border-[#D1D6D1] flex flex-col items-center justify-center shadow-sm">
+             <div className="text-2xl font-black text-[#2D3A30]">{orders.filter(o => getStageConfig(o).progress < 100).length}</div>
+             <p className="text-[10px] text-[#4F6D58] font-black uppercase mt-1">进行中</p>
           </div>
-        );
+          <div className="bg-[#FAFAF5] p-4 rounded-xl border border-[#D1D6D1] flex flex-col items-center justify-center opacity-70 shadow-sm">
+             <div className="text-2xl font-black text-[#2D3A30] opacity-30">{orders.filter(o => getStageConfig(o).progress === 100).length}</div>
+             <p className="text-[10px] text-[#4F6D58] font-black uppercase mt-1">已完成</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
-      case 'priority':
-        return (
-          <div key="priority" className={`${baseClass}`}>
-            <div className="p-7 border-b border-[#E2E8E4] flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="w-4 h-4 text-[#3A5A40] fill-[#3A5A40]">★</span>
-                <h3 className="font-bold text-[#2D3A30] text-sm uppercase tracking-tight">高优先级企划</h3>
+  const renderPriorityModule = (index: number) => (
+    <div key="priority" className="relative group animate-in fade-in duration-500">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-4 bg-red-500 rounded-full" />
+            <h3 className="font-black text-[#2D3A30] text-sm uppercase tracking-widest">Focus Track 关键焦点</h3>
+          </div>
+          <button onClick={() => setIsSelectionModalOpen(true)} className="text-[10px] font-black px-4 py-2 rounded-lg border border-[#D1D6D1] bg-white text-[#4F6D58] hover:bg-slate-50 transition-all uppercase tracking-widest shadow-sm flex items-center gap-1.5">
+            <Plus className="w-3.5 h-3.5" /> 添加
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {sortedPriorityOrders.length > 0 ? (
+            sortedPriorityOrders.map((o, idx) => {
+              const stageConfig = getStageConfig(o);
+              return (
+                <div 
+                  key={o.id} 
+                  onClick={() => onEditOrder(o)} 
+                  className="bg-[#FAFAF5] p-5 rounded-xl border border-[#D1D6D1] shadow-sm hover:border-[#3A5A40] transition-all cursor-pointer flex items-center gap-4 group/item relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 p-2 flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); movePriorityItem(idx, 'up'); }} className="p-1 bg-white border rounded shadow-sm hover:bg-slate-50"><ChevronUp className="w-3 h-3" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); movePriorityItem(idx, 'down'); }} className="p-1 bg-white border rounded shadow-sm hover:bg-slate-50"><ChevronDown className="w-3 h-3" /></button>
+                    <button onClick={(e) => handleExportSingleICS(o, e)} className="p-1 bg-white border border-[#D1D6D1] text-[#3A5A40] rounded shadow-sm hover:bg-slate-50"><CalendarPlus className="w-3 h-3" /></button>
+                    <button onClick={(e) => removeFromFocus(o.id, e)} className="p-1 bg-white border border-red-100 text-red-400 rounded shadow-sm hover:bg-red-50"><Trash2 className="w-3 h-3" /></button>
+                  </div>
+
+                  <div className="w-1.5 h-10 rounded-full shrink-0" style={{ backgroundColor: stageConfig.color }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                      <h4 className="font-bold text-[#2D3A30] text-base truncate tracking-tight">{o.title}</h4>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-200/40 rounded-full overflow-hidden">
+                      <div className="h-full transition-all duration-700" style={{ width: `${stageConfig.progress}%`, backgroundColor: stageConfig.color }} />
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-black text-[#2D3A30]">¥{o.totalPrice.toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-slate-300 uppercase mt-0.5">{stageConfig.progress}%</p>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="col-span-1 md:col-span-2 py-12 text-center border-2 border-dashed border-[#D1D6D1] rounded-2xl bg-white/20 flex flex-col items-center justify-center gap-3">
+              <Star className="w-6 h-6 text-[#D1D6D1]" />
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">暂无关键任务，点击上方按钮挑选</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderUpcomingModule = (index: number) => (
+    <div key="upcoming" className="relative group animate-in fade-in duration-500">
+      <div className="bg-[#FAFAF5] rounded-xl border border-[#D1D6D1] shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CalendarIcon className="w-4 h-4 text-[#3A5A40]" />
+            <h3 className="font-black text-[#2D3A30] text-sm uppercase tracking-widest">最近截止项目</h3>
+          </div>
+        </div>
+        <div className="divide-y divide-slate-100">
+          {upcomingOrders.map(o => (
+            <div key={o.id} onClick={() => onEditOrder(o)} className="flex items-center gap-5 p-5 hover:bg-[#FDFDFB] transition-all cursor-pointer group">
+              <div className="flex flex-col items-center justify-center w-11 h-11 bg-[#2D3A30] rounded-lg shrink-0">
+                <span className="text-base font-black text-white">{format(new Date(o.deadline.replace(/-/g, '/')), 'dd')}</span>
+                <span className="text-[10px] font-bold text-[#A3B18A] uppercase">{format(new Date(o.deadline.replace(/-/g, '/')), 'MMM', { locale: zhCN })}</span>
               </div>
-              <button onClick={() => setIsManagingPriority(!isManagingPriority)} className="text-[9px] font-bold text-[#3A5A40] uppercase tracking-widest bg-[#EDF1EE] px-5 py-2.5 rounded-xl border border-[#D1D9D3] hover:bg-[#D1D9D3] transition-all">
-                {isManagingPriority ? '完成' : '调整排序'}
-              </button>
-            </div>
-            <div className="p-5">
-              {isManagingPriority ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {orders.map(o => (
-                    <button key={o.id} onClick={() => onUpdatePriorityIds(priorityOrderIds.includes(o.id) ? priorityOrderIds.filter(id => id !== o.id) : [...priorityOrderIds, o.id])} className={`p-6 rounded-[2rem] border text-left flex flex-col transition-all ${priorityOrderIds.includes(o.id) ? 'bg-[#3A5A40] border-[#3A5A40] text-white shadow-lg' : 'bg-white border-[#E2E8E4] text-[#2D3A30]'}`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        {renderPriorityDot(o.priority)}
-                        <span className="font-black text-[15px] truncate">{o.title}</span>
-                      </div>
-                      <span className={`text-[10px] font-black ${priorityOrderIds.includes(o.id) ? 'text-white/60' : 'text-[#4F6D58]'}`}>¥{o.totalPrice.toLocaleString()}</span>
-                    </button>
-                  ))}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-2 h-2 rounded-full ${o.priority === '高' ? 'bg-red-500' : 'bg-slate-200'} shrink-0`} />
+                  <h4 className="font-bold text-[#2D362E] truncate text-base tracking-tight">{o.title}</h4>
                 </div>
-              ) : priorityOrders.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {priorityOrders.map((o, idx) => {
-                    const stage = getStageConfig(o);
-                    return (
-                      <div 
-                        key={o.id} 
-                        draggable
-                        onClick={() => onEditOrder(o)}
-                        onDragStart={() => handlePriorityDragStart(idx)}
-                        onDragOver={(e) => handlePriorityDragOver(e, idx)}
-                        onDragEnd={() => setDraggedPriorityIdx(null)}
-                        className={`p-7 bg-white rounded-[2.5rem] border border-[#E2E8E4] shadow-sm cursor-grab active:cursor-grabbing hover:border-[#3A5A40] transition-all group relative ${draggedPriorityIdx === idx ? 'opacity-40 grayscale scale-95' : 'hover:shadow-md'}`}
-                      >
-                        <div className="absolute left-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <GripVertical className="w-4 h-4 text-[#D1D9D3]" />
-                        </div>
-                        <div className="flex justify-between items-start mb-5 pl-2">
-                           <div className="flex items-center gap-3 w-3/4">
-                             {renderPriorityDot(o.priority)}
-                             <h4 className="font-black text-[#2D3A30] text-[16px] md:text-[18px] tracking-tight truncate group-hover:text-[#3A5A40] transition-colors">{o.title}</h4>
-                           </div>
-                           <span className="px-3 py-1 bg-[#4F6D58] text-white text-[9px] font-black rounded-lg shrink-0 uppercase tracking-widest shadow-sm">P{idx + 1}</span>
-                        </div>
-                        <div className="flex items-center gap-4 pl-2">
-                           <div className="w-20 h-2 bg-[#F2F4F0] rounded-full overflow-hidden border border-slate-100 shrink-0">
-                              <div className="h-full transition-all" style={{ width: `${stage.progress}%`, backgroundColor: stage.color }}></div>
-                           </div>
-                           <span className="text-[11px] font-black text-[#4F6D58]">{stage.progress}%</span>
-                           <span className="ml-auto text-[14px] font-black text-slate-900">¥{o.totalPrice.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="w-32 h-1 bg-slate-200/50 rounded-full overflow-hidden">
+                   <div className="h-full bg-[#3A5A40]" style={{ width: `${getStageConfig(o).progress}%` }} />
                 </div>
-              ) : <div className="py-24 text-center text-[#D1D9D3] font-bold text-[10px] uppercase tracking-widest">暂无高优企划</div>}
+              </div>
+              <div className="text-right flex items-center gap-3">
+                <button onClick={(e) => handleExportSingleICS(o, e)} className="p-2 border border-[#D1D6D1] rounded-lg text-[#3A5A40] hover:bg-slate-50"><CalendarPlus className="w-4 h-4" /></button>
+                <p className="text-sm font-black text-[#2D362E]">¥{o.totalPrice.toLocaleString()}</p>
+              </div>
             </div>
-          </div>
-        );
-      default: return null;
-    }
-  };
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-2 animate-in fade-in duration-700">
-      <div className="space-y-2">{sectionOrder.map(t => renderSection(t))}</div>
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+      <div className="flex justify-end px-1">
+        <button onClick={() => setIsEditMode(!isEditMode)} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border transition-all ${isEditMode ? 'bg-[#3A5A40] text-white border-[#3A5A40]' : 'bg-white text-slate-400 border-[#D1D6D1] hover:border-slate-400 shadow-sm'}`}>
+          <Settings2 className="w-4 h-4" />
+          {isEditMode ? '退出布局模式' : '排版布局模式'}
+        </button>
+      </div>
+
+      <div className="space-y-8">
+        {moduleOrder.map((moduleId, index) => {
+          if (moduleId === 'stats') return renderStatsModule(index);
+          if (moduleId === 'priority') return renderPriorityModule(index);
+          if (moduleId === 'upcoming') return renderUpcomingModule(index);
+          return null;
+        })}
+      </div>
+
+      {isSelectionModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#1B241D]/60 backdrop-blur-sm" onClick={() => setIsSelectionModalOpen(false)}>
+          <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
+              <h4 className="font-black text-[#2D362E] uppercase tracking-tight text-sm">提升至 Focus Track</h4>
+              <button onClick={() => setIsSelectionModalOpen(false)} className="p-2 text-slate-300 hover:text-slate-900"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-4 max-h-[50vh] overflow-y-auto custom-scrollbar space-y-2 bg-[#FAFAF5]">
+              {nonHighPriorityOrders.length > 0 ? (
+                nonHighPriorityOrders.map(o => (
+                  <button 
+                    key={o.id}
+                    onClick={() => {
+                      onUpdateOrder({ ...o, priority: '高' });
+                      onUpdatePriorityIds([...priorityOrderIds, o.id]);
+                      setIsSelectionModalOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between p-4 bg-white rounded-xl border border-transparent hover:border-[#3A5A40] transition-all text-left shadow-sm group"
+                  >
+                    <span className="font-bold text-sm text-[#2D362E] truncate">{o.title}</span>
+                    <Plus className="w-4 h-4 text-slate-300 group-hover:text-[#3A5A40]" />
+                  </button>
+                ))
+              ) : (
+                <p className="text-center py-12 text-xs font-bold text-slate-400 uppercase tracking-widest">当前暂无可选的进行中企划</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
