@@ -1,13 +1,15 @@
 
 import React from 'react';
-import { LayoutDashboard, Calendar, ListTodo, Wallet, Palette, Bot, Settings } from 'lucide-react';
+import { LayoutDashboard, Calendar, ListTodo, Wallet, Palette, Bot, Settings, Moon, Sun } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  isDarkMode: boolean;
+  setIsDarkMode: (val: boolean) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDarkMode, setIsDarkMode }) => {
   const menuItems = [
     { id: 'dashboard', label: '工作台概览', icon: LayoutDashboard },
     { id: 'calendar', label: '创作日历', icon: Calendar },
@@ -18,15 +20,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   ];
 
   return (
-    <div className="hidden lg:flex w-64 bg-white border-r border-slate-200 h-screen flex-col sticky top-0 shadow-[1px_0_0_rgba(0,0,0,0.02)]">
+    <div className="hidden lg:flex w-64 bg-white dark:bg-[#14171C] border-r border-[#E0DDD5] dark:border-[#2D3139] h-screen flex-col sticky top-0 shadow-[1px_0_0_rgba(0,0,0,0.02)] transition-colors">
       <div className="p-8 mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-slate-900 text-white rounded-xl shadow-sm">
+          <div className="p-2 bg-[#A3B18A] dark:bg-[#A3B18A] text-white rounded-xl shadow-sm">
              <Palette className="w-5 h-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-tight text-slate-900">艺策 ArtNexus</span>
-            <span className="text-[8px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-0.5">Professional Edition</span>
+            <span className="text-lg font-bold tracking-tight text-[#333333] dark:text-[#E0E0E0]">艺策 ArtNexus</span>
+            <span className="text-[8px] text-[#8E8B82] dark:text-[#8E9AAF] font-bold uppercase tracking-[0.2em] mt-0.5">Zen Workspace</span>
           </div>
         </div>
       </div>
@@ -38,25 +40,33 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
             onClick={() => setActiveTab(item.id)}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group ${
               activeTab === item.id 
-                ? 'bg-slate-50 text-slate-900 font-bold' 
-                : 'text-slate-500 hover:bg-slate-50/80 hover:text-slate-700'
+                ? 'bg-[#F5F5F0] dark:bg-[#1A1D23] text-[#333333] dark:text-[#E0E0E0] font-bold shadow-sm' 
+                : 'text-[#8E8B82] dark:text-[#8E9AAF] hover:bg-[#F5F5F0]/80 dark:hover:bg-[#1A1D23]/50'
             }`}
           >
-            <item.icon className={`w-4 h-4 transition-colors ${activeTab === item.id ? 'text-blue-600' : 'text-slate-300'}`} />
+            <item.icon className={`w-4 h-4 transition-colors ${activeTab === item.id ? 'text-[#A3B18A]' : 'text-[#D9D5CB] dark:text-[#2D3139]'}`} />
             <span className="text-[13px] tracking-tight">{item.label}</span>
             {activeTab === item.id && (
-              <div className="ml-auto w-1.5 h-1.5 bg-blue-600 rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]"></div>
+              <div className="ml-auto w-1.5 h-1.5 bg-[#A3B18A] rounded-full shadow-[0_0_8px_rgba(163,177,138,0.4)]"></div>
             )}
           </button>
         ))}
       </nav>
       
-      <div className="p-6 mt-auto">
-        <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">System Status</p>
+      <div className="p-6 mt-auto space-y-4">
+        <button 
+          onClick={() => setIsDarkMode(!isDarkMode)}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#F5F5F0] dark:bg-[#1A1D23] text-[#8E8B82] dark:text-[#8E9AAF] hover:text-[#333333] dark:hover:text-[#E0E0E0] transition-all border border-[#E0DDD5] dark:border-[#2D3139]"
+        >
+          {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          <span className="text-[12px] font-bold">{isDarkMode ? '浅色模式' : '深色主题'}</span>
+        </button>
+
+        <div className="bg-[#EAE8E0] dark:bg-[#0A0C0E] p-5 rounded-2xl border border-[#D9D5CB] dark:border-[#2D3139]">
+          <p className="text-[9px] font-black text-[#8E8B82] dark:text-[#8E9AAF] uppercase tracking-widest mb-1.5">System Status</p>
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-            <p className="text-[10px] text-slate-500 font-medium">本地加密存储已就绪</p>
+            <div className="w-1.5 h-1.5 bg-[#A3B18A] rounded-full animate-pulse"></div>
+            <p className="text-[10px] text-[#8E8B82] dark:text-[#8E9AAF] font-medium">侘寂模式激活</p>
           </div>
         </div>
       </div>

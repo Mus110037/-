@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -9,7 +10,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="艺策ArtNexus">
-    <meta name="theme-color" content="#7c3aed">
+    <meta name="theme-color" content="#A3B18A">
     
     <!-- Link Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -23,15 +24,26 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: contain;
-            background-color: #f8fafc;
+            background-color: #F5F5F0; /* 侘寂米白色 */
             padding-top: env(safe-area-inset-top);
+            transition: background-color 0.5s ease;
         }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .dark body {
+            background-color: #0F1115; /* 深邃墨黑色 */
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E0DDD5; border-radius: 10px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #2D3139; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #A3B18A; }
         
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+        /* 莫兰蒂色调扩展 */
+        .bg-morandi-sage { background-color: #A3B18A; }
+        .bg-morandi-dusty { background-color: #8E9AAF; }
+        .bg-morandi-clay { background-color: #B5838D; }
+        .bg-morandi-sand { background-color: #D4A373; }
     </style>
 <script type="importmap">
 {
@@ -50,9 +62,8 @@
 }
 </script>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-[#F5F5F0] dark:bg-[#0F1115] text-[#333333] dark:text-[#E0E0E0]">
     <div id="root"></div>
-    <!-- 使用相对路径引用入口文件，确保在 GitHub 子路径下也能加载 -->
     <script type="module" src="index.tsx"></script>
 </body>
 </html>
