@@ -18,15 +18,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
   ];
 
   return (
-    <div className="hidden lg:flex w-64 bg-white border-r border-[#E0DDD5] h-screen flex-col sticky top-0 shadow-[1px_0_0_rgba(0,0,0,0.01)] transition-colors">
+    <div className="hidden lg:flex w-64 bg-white border-r border-[#E2E8E4] h-screen flex-col sticky top-0 shadow-[1px_0_0_rgba(0,0,0,0.01)] transition-colors">
       <div className="p-8 mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-[#A3B18A] text-white rounded-xl shadow-sm">
+          <div className="p-2.5 bg-[#3A5A40] text-white rounded-xl shadow-md">
              <Palette className="w-5 h-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-lg font-extrabold tracking-tight text-[#2D2D2A]">艺策 ArtNexus</span>
-            <span className="text-[8px] text-[#8E8B82] font-black uppercase tracking-[0.25em] mt-0.5">Zen Workspace</span>
+            <span className="text-lg font-extrabold tracking-tight text-[#2D3A30]">艺策 ArtNexus</span>
+            <span className="text-[8px] text-[#4F6D58] font-black uppercase tracking-[0.25em] mt-0.5">Forest Rhythm</span>
           </div>
         </div>
       </div>
@@ -38,25 +38,25 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
             onClick={() => setActiveTab(item.id)}
             className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all group ${
               activeTab === item.id 
-                ? 'bg-[#F5F5F0] text-[#2D2D2A] font-bold shadow-sm' 
-                : 'text-[#8E8B82] hover:bg-[#F5F5F0]/60'
+                ? 'bg-[#F2F4F0] text-[#1B241D] font-bold shadow-sm' 
+                : 'text-[#4F6D58] hover:bg-[#F2F4F0]/60'
             }`}
           >
-            <item.icon className={`w-4 h-4 transition-colors ${activeTab === item.id ? 'text-[#A3B18A]' : 'text-[#D9D5CB]'}`} />
+            <item.icon className={`w-4 h-4 transition-colors ${activeTab === item.id ? 'text-[#3A5A40]' : 'text-[#D1D9D3]'}`} />
             <span className="text-[13px] tracking-tight font-medium">{item.label}</span>
             {activeTab === item.id && (
-              <div className="ml-auto w-1.5 h-1.5 bg-[#A3B18A] rounded-full shadow-[0_0_8px_rgba(163,177,138,0.4)]"></div>
+              <div className="ml-auto w-1.5 h-1.5 bg-[#3A5A40] rounded-full shadow-[0_0_8px_rgba(58,90,64,0.4)]"></div>
             )}
           </button>
         ))}
       </nav>
       
       <div className="p-6 mt-auto">
-        <div className="bg-[#EAE8E0] p-5 rounded-2xl border border-[#D9D5CB]">
-          <p className="text-[9px] font-black text-[#8E8B82] uppercase tracking-widest mb-1.5">Creative Vibe</p>
+        <div className="bg-[#EDF1EE] p-5 rounded-2xl border border-[#D1D9D3]">
+          <p className="text-[9px] font-black text-[#4F6D58] uppercase tracking-widest mb-1.5">Forest Vibe</p>
           <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 bg-[#A3B18A] rounded-full animate-pulse shadow-[0_0_5px_rgba(163,177,138,0.5)]"></div>
-            <p className="text-[10px] text-[#4A4944] font-extrabold tracking-wide">同步状态：云端实时就绪</p>
+            <div className="w-1.5 h-1.5 bg-[#3A5A40] rounded-full animate-pulse shadow-[0_0_5px_rgba(58,90,64,0.5)]"></div>
+            <p className="text-[10px] text-[#2D3A30] font-extrabold tracking-wide">同步：自然韵律就绪</p>
           </div>
         </div>
       </div>

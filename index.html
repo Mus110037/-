@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="艺策ArtNexus">
-    <meta name="theme-color" content="#A3B18A">
+    <meta name="theme-color" content="#3A5A40">
     
     <!-- Link Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -24,29 +24,26 @@
             font-family: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif; 
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: contain;
-            background-color: #F5F5F0; /* 侘寂米白色 */
-            color: #2D2D2A;
+            background-color: #F2F4F0; /* 森林浅米色 */
+            color: #2D3A30;
             padding-top: env(safe-area-inset-top);
-            /* 提高易读性的全局字体微调 */
             line-height: 1.6;
             letter-spacing: -0.01em;
         }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E0DDD5; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #A3B18A; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #D1D9D3; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4F6D58; }
         
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 
-        /* 莫兰蒂色调扩展 */
-        .bg-morandi-sage { background-color: #A3B18A; }
-        .bg-morandi-dusty { background-color: #8E9AAF; }
-        .bg-morandi-clay { background-color: #B5838D; }
-        .bg-morandi-sand { background-color: #D4A373; }
+        /* 森林色调扩展 */
+        .bg-forest-deep { background-color: #2D3A30; }
+        .bg-forest-fern { background-color: #4F6D58; }
+        .bg-forest-sage { background-color: #A3B18A; }
+        .bg-forest-mist { background-color: #E2E8E4; }
         
-        /* 针对阅读优化的文本类 */
-        .text-readable { color: #1A1A18; }
-        .text-secondary-readable { color: #575752; }
+        .text-forest-dark { color: #1B241D; }
     </style>
 <script type="importmap">
 {
@@ -65,7 +62,7 @@
 }
 </script>
 </head>
-<body class="bg-[#F5F5F0]">
+<body class="bg-[#F2F4F0]">
     <div id="root"></div>
     <script type="module" src="index.tsx"></script>
 </body>

@@ -11,7 +11,7 @@ import SyncModal from './components/SyncModal';
 import SettingsView from './components/SettingsView';
 import SocialShareModal from './components/SocialShareModal';
 import { Order, OrderStatus, DEFAULT_STAGES, DEFAULT_SOURCES, DEFAULT_ART_TYPES, DEFAULT_PERSON_COUNTS, SAMPLE_ORDERS, AppSettings } from './types';
-import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, CloudSync, Cloud, CloudOff, History } from 'lucide-react';
+import { Sparkles, BrainCircuit, Plus, FileSpreadsheet, Share2, Cloud, History, TabletSmartphone } from 'lucide-react';
 import { getSchedulingInsights } from './services/geminiService';
 
 const STORAGE_KEY = 'artnexus_orders_v5';
@@ -40,21 +40,20 @@ const App: React.FC = () => {
   const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
-  const [syncState, setSyncState] = useState<'active' | 'manual' | 'disconnected'>('disconnected');
+  const [syncState, setSyncState] = useState<'active' | 'mobile' | 'manual'>('manual');
 
   useEffect(() => {
     const hasLinked = localStorage.getItem('artnexus_linked_file');
-    const supportsAPI = 'showSaveFilePicker' in window && window.self === window.top;
-    if (hasLinked && supportsAPI) setSyncState('active');
-    else if (!supportsAPI) setSyncState('manual');
-    else setSyncState('disconnected');
+    const supportsFileSystemAPI = 'showSaveFilePicker' in window;
+    
+    if (hasLinked && supportsFileSystemAPI) setSyncState('active');
+    else if (!supportsFileSystemAPI) setSyncState('mobile');
+    else setSyncState('manual');
   }, [isSyncModalOpen]);
 
-  // 本地存储同步 + 自动快照
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
     
-    // 自动快照：每当数据变动，保存当前版本（最多保留 5 个）
     const timer = setTimeout(() => {
       const savedSnapshots = localStorage.getItem(SNAPSHOT_KEY);
       let snaps = savedSnapshots ? JSON.parse(savedSnapshots) : [];
@@ -64,7 +63,6 @@ const App: React.FC = () => {
         data: orders
       };
 
-      // 避免重复保存相同数据
       if (snaps.length > 0 && JSON.stringify(snaps[snaps.length - 1].data) === JSON.stringify(orders)) {
         return;
       }
@@ -72,7 +70,7 @@ const App: React.FC = () => {
       snaps.push(newSnap);
       if (snaps.length > 5) snaps.shift();
       localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snaps));
-    }, 2000); // 延迟 2 秒保存，避免输入时的频繁写入
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [orders]);
@@ -80,10 +78,6 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
-
-  useEffect(() => {
-    document.documentElement.classList.remove('dark');
-  }, []);
 
   useEffect(() => {
     const loadInsights = async () => {
@@ -126,17 +120,17 @@ const App: React.FC = () => {
       case 'settings': return <SettingsView settings={settings} setSettings={setSettings} />;
       case 'ai-assistant':
         return (
-          <div className="bg-[#EAE8E0] rounded-[2rem] p-12 border border-[#D9D5CB] max-w-2xl mx-auto mt-4 text-center">
-            <div className="bg-[#333333] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl">
-              <BrainCircuit className="w-8 h-8 text-[#F5F5F0]" />
+          <div className="bg-[#EDF1EE] rounded-[2rem] p-12 border border-[#D1D9D3] max-w-2xl mx-auto mt-4 text-center">
+            <div className="bg-[#3A5A40] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl">
+              <BrainCircuit className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-xl font-bold mb-4 text-[#333333] tracking-tight uppercase">AI 排单管家</h2>
-            <p className="text-[11px] text-[#8E8B82] mb-10 leading-relaxed font-bold uppercase tracking-widest">分析创作周期，优化交付方案</p>
+            <h2 className="text-xl font-bold mb-4 text-[#2D3A30] tracking-tight uppercase">AI 森之韵管家</h2>
+            <p className="text-[11px] text-[#4F6D58] mb-10 leading-relaxed font-bold uppercase tracking-widest">自然启发创作，智能优化调度</p>
             <button 
               onClick={() => getSchedulingInsights(orders).then(setInsights)}
-              className="w-full bg-[#333333] text-white py-4 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg"
+              className="w-full bg-[#3A5A40] text-white py-4 rounded-xl font-bold hover:opacity-95 transition-all shadow-lg"
             >
-              <Sparkles className="w-4 h-4 inline mr-2" /> 运行智能分析
+              <Sparkles className="w-4 h-4 inline mr-2" /> 开启自然洞察
             </button>
           </div>
         );
@@ -145,7 +139,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F5F5F0] text-[#333333]">
+    <div className="flex min-h-screen bg-[#F2F4F0] text-[#2D3A30]">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
       
@@ -154,44 +148,49 @@ const App: React.FC = () => {
           <div className="min-w-0">
             <div className="flex items-center gap-2 mb-1">
                {syncState === 'active' ? (
-                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">
+                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full">
                     <Cloud className="w-2.5 h-2.5" />
-                    <span className="text-[8px] font-black uppercase">Live Sync</span>
+                    <span className="text-[8px] font-black uppercase tracking-wider">Nature Sync</span>
+                 </div>
+               ) : syncState === 'mobile' ? (
+                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#DAD7CD] text-[#3A5A40] rounded-full">
+                    <TabletSmartphone className="w-2.5 h-2.5" />
+                    <span className="text-[8px] font-black uppercase tracking-wider">iPhone Mode</span>
                  </div>
                ) : (
-                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-200 text-slate-500 rounded-full">
+                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#D1D9D3] text-[#3A5A40] rounded-full">
                     <History className="w-2.5 h-2.5" />
-                    <span className="text-[8px] font-black uppercase">Auto-Snapshot</span>
+                    <span className="text-[8px] font-black uppercase tracking-wider">Eco Snapshot</span>
                  </div>
                )}
             </div>
-            <h1 className="text-xl md:text-2xl font-black text-[#2D2D2A] truncate tracking-tight uppercase">
+            <h1 className="text-xl md:text-2xl font-black text-[#1B241D] truncate tracking-tight uppercase">
               {activeTab === 'dashboard' ? 'Overview' : 
                activeTab === 'calendar' ? 'Schedule' : 
-               activeTab === 'orders' ? 'Projects' : 
-               activeTab === 'finance' ? 'Finance' : 
-               activeTab === 'settings' ? 'Workspace' : 'AI Assistant'}
+               activeTab === 'orders' ? 'Forest' : 
+               activeTab === 'finance' ? 'Harvest' : 
+               activeTab === 'settings' ? 'Ecosystem' : 'Natural AI'}
             </h1>
           </div>
           
           <div className="flex items-center gap-2">
-            <button onClick={() => setIsSocialModalOpen(true)} className="p-3 bg-white text-[#8E8B82] border border-[#E0DDD5] rounded-xl hover:text-[#2D2D2A] transition-all shadow-sm">
+            <button onClick={() => setIsSocialModalOpen(true)} className="p-3 bg-white text-[#4F6D58] border border-[#E2E8E4] rounded-xl hover:text-[#2D3A30] transition-all shadow-sm">
               <Share2 className="w-4 h-4" /> 
             </button>
-            <button onClick={() => setIsSyncModalOpen(true)} className="p-3 bg-white text-[#8E8B82] border border-[#E0DDD5] rounded-xl hover:text-[#2D2D2A] transition-all shadow-sm relative group">
+            <button onClick={() => setIsSyncModalOpen(true)} className="p-3 bg-white text-[#4F6D58] border border-[#E2E8E4] rounded-xl hover:text-[#2D3A30] transition-all shadow-sm relative group">
               <FileSpreadsheet className="w-4 h-4" />
-              <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white bg-[#A3B18A]"></div>
+              <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white bg-[#3A5A40]"></div>
             </button>
-            <button onClick={() => setIsCreateModalOpen(true)} className="p-3 bg-[#333333] text-white rounded-xl flex items-center gap-2 hover:opacity-90 transition-all shadow-md">
+            <button onClick={() => setIsCreateModalOpen(true)} className="p-3 bg-[#3A5A40] text-white rounded-xl flex items-center gap-2 hover:opacity-90 transition-all shadow-md">
               <Plus className="w-4 h-4" /> 
-              <span className="hidden md:inline font-bold text-[11px] uppercase tracking-widest">录入企划</span>
+              <span className="hidden md:inline font-bold text-[11px] uppercase tracking-widest">播种企划</span>
             </button>
           </div>
         </header>
 
         {insights && (
-          <div className="mb-8 p-5 bg-white border border-[#E0DDD5] rounded-2xl text-[#2D2D2A] flex items-start gap-4 shadow-sm">
-            <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-[#A3B18A]" />
+          <div className="mb-8 p-5 bg-white border border-[#E2E8E4] rounded-2xl text-[#2D3A30] flex items-start gap-4 shadow-sm">
+            <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-[#3A5A40]" />
             <p className="text-[11px] font-bold leading-relaxed tracking-wide">{insights}</p>
           </div>
         )}
