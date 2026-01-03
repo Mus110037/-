@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Download, Upload, CheckCircle2, Cloud, ChevronRight, Share, Trash2, GitMerge, FileText, Info, Copy, ClipboardPaste, Zap } from 'lucide-react';
+import { X, Download, Upload, CheckCircle2, Cloud, ChevronRight, Share, Trash2, GitMerge, FileText, Info, Copy, ClipboardPaste, Zap, AlertTriangle } from 'lucide-react';
 import { Order } from '../types';
 
 interface SyncModalProps {
@@ -75,29 +75,34 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
     const finalToken = `ARTNEXUS:${encoded}`;
     
     navigator.clipboard.writeText(finalToken).then(() => {
-      alert("同步口令已存入剪贴板！\n\n请在另一台设备点击“粘贴口令导入”并粘贴即可。");
+      alert("同步口令已存入剪贴板！\n\n注意：粘贴时请确保大小写未被系统修改。");
     }).catch(err => {
       prompt("自动复制失败，请手动复制下方口令：", finalToken);
     });
   };
 
   const processImportToken = (token: string) => {
-    // 正则表达式：忽略大小写，允许前后有干扰文字，匹配 ARTNEXUS: 后面的 Base64 内容
+    // 允许前缀大小写不敏感，但 Base64 内容本身是大小写敏感的
     const regex = /ARTNEXUS:([A-Za-z0-9+/=%\s\n\r]+)/i;
     const match = token.match(regex);
 
     if (!match || !match[1]) {
-      alert("无效的口令：未检测到 ArtNexus 核心数据。请确保完整复制了以 ARTNEXUS: 开头的代码。");
+      alert("解析失败：未识别到口令特征。请确保口令中包含“ARTNEXUS:”字样。");
       return;
     }
 
     try {
-      // 进一步清洗：去除空格、换行等干扰
       const encodedPart = match[1].replace(/[\s\n\r]/g, '');
       const decodedData = safeAtob(encodedPart);
       
       if (!decodedData) {
-        throw new Error("Base64 解析失败");
+        // 如果解码失败，且输入全是小写，给出精准提示
+        if (encodedPart === encodedPart.toLowerCase()) {
+          alert("错误：检测到数据全变为小写。Base64 口令必须区分大小写，请检查是否被系统的自动更正功能修改了。");
+        } else {
+          throw new Error("Base64 解析失败");
+        }
+        return;
       }
 
       const parsedOrders = JSON.parse(decodedData);
@@ -112,7 +117,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
       setShowClipboardInput(false);
     } catch (e) {
       console.error("Sync Error:", e);
-      alert("解析失败：口令可能已过期或复制不完整。请重新生成口令尝试。");
+      alert("解析失败：数据已损坏。建议尝试使用“方案 B”发送文件进行同步。");
     }
   };
 
@@ -128,7 +133,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
         processImportToken(text);
       }
     } catch (err) {
-      alert("浏览器拒绝了剪贴板访问权限，请手动粘贴到输入框。");
+      alert("无法读取剪贴板，请手动粘贴。");
     }
   };
 
@@ -175,12 +180,16 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
               <div className="p-4 bg-[#F2F4F0] rounded-2xl space-y-3 animate-in slide-in-from-top-2">
                 <div className="flex justify-between items-center px-1">
                   <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">导入输入框</span>
-                  <button onClick={handleQuickReadClipboard} className="text-[9px] font-bold text-amber-600 uppercase hover:underline">一键读取剪贴板</button>
+                  <button onClick={handleQuickReadClipboard} className="text-[9px] font-bold text-amber-600 uppercase hover:underline">智能读取</button>
                 </div>
                 <textarea 
                   className="w-full p-3 bg-white border border-slate-200 rounded-xl text-[10px] font-medium focus:border-amber-500 outline-none" 
                   rows={3} 
-                  placeholder="在此粘贴 ARTNEXUS:... 开头的口令内容"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="off"
+                  placeholder="在此粘贴 ARTNEXUS:... 开头的代码"
                   value={clipboardValue}
                   onChange={e => setClipboardValue(e.target.value)}
                 />
@@ -239,15 +248,13 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, onImport
           </div>
 
           {/* 小贴士 */}
-          <div className="p-5 bg-slate-50 border border-slate-100 rounded-3xl space-y-3">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Info className="w-4 h-4" />
-              <p className="text-[10px] font-black uppercase tracking-wider">为什么我的口令无效？</p>
+          <div className="p-5 bg-amber-50 border border-amber-100 rounded-3xl space-y-3">
+            <div className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="w-4 h-4" />
+              <p className="text-[10px] font-black uppercase tracking-wider">大小写敏感提醒</p>
             </div>
-            <p className="text-[10px] leading-relaxed text-slate-500">
-              1. 确保在 A 设备点击了“生成”并看到了成功提示。<br/>
-              2. 确保在 B 设备粘贴时，内容包含 <b>ARTNEXUS:</b> 字符。<br/>
-              3. 若依然失败，请使用“方案 B”发送文件同步。
+            <p className="text-[10px] leading-relaxed text-amber-700">
+              同步口令是大小写敏感的。粘贴后如果解析失败，请检查手机是否开启了“自动首字母大写”或“自动更正”，这可能会破坏口令数据。
             </p>
           </div>
         </div>
