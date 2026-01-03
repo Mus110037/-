@@ -163,15 +163,15 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1.5">
                       <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                      <h4 className="font-bold text-[#2D3A30] text-base truncate tracking-tight">{o.title}</h4>
+                      <h4 className="font-black text-[#2D3A30] text-[15px] md:text-lg truncate tracking-tight">{o.title}</h4>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200/40 rounded-full overflow-hidden">
                       <div className="h-full transition-all duration-700" style={{ width: `${stageConfig.progress}%`, backgroundColor: stageConfig.color }} />
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-black text-[#2D3A30]">¥{o.totalPrice.toLocaleString()}</p>
-                    <p className="text-[10px] font-bold text-slate-300 uppercase mt-0.5">{stageConfig.progress}%</p>
+                    <p className="text-sm md:text-base font-black text-[#2D3A30]">¥{o.totalPrice.toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-slate-300 uppercase mt-0.5 tracking-widest">{stageConfig.progress}%</p>
                   </div>
                 </div>
               );
@@ -206,15 +206,17 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
                   <div className={`w-2 h-2 rounded-full ${o.priority === '高' ? 'bg-red-500' : 'bg-slate-200'} shrink-0`} />
-                  <h4 className="font-bold text-[#2D362E] truncate text-base tracking-tight">{o.title}</h4>
+                  <h4 className="font-black text-[#2D362E] truncate text-[15px] md:text-base tracking-tight leading-tight">{o.title}</h4>
                 </div>
                 <div className="w-32 h-1 bg-slate-200/50 rounded-full overflow-hidden">
                    <div className="h-full bg-[#3A5A40]" style={{ width: `${getStageConfig(o).progress}%` }} />
                 </div>
               </div>
-              <div className="text-right flex items-center gap-3">
-                <button onClick={(e) => handleExportSingleICS(o, e)} className="p-2 border border-[#D1D6D1] rounded-lg text-[#3A5A40] hover:bg-slate-50"><CalendarPlus className="w-4 h-4" /></button>
-                <p className="text-sm font-black text-[#2D362E]">¥{o.totalPrice.toLocaleString()}</p>
+              <div className="text-right flex items-center gap-2 md:gap-3">
+                <button onClick={(e) => handleExportSingleICS(o, e)} className="p-2 border border-[#D1D6D1] rounded-lg text-[#3A5A40] hover:bg-slate-50 shrink-0"><CalendarPlus className="w-4 h-4" /></button>
+                <div className="flex flex-col items-end">
+                  <p className="text-sm md:text-base font-black text-[#2D362E]">¥{o.totalPrice.toLocaleString()}</p>
+                </div>
               </div>
             </div>
           ))}

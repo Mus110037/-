@@ -153,21 +153,21 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
                       <span className="text-[8px] md:text-[9px] font-bold text-[#A3B18A] uppercase">{format(new Date(order.deadline.replace(/-/g, '/')), 'MMM', { locale: zhCN })}</span>
                     </div>
 
-                    <div className="flex-1 min-w-0 px-1">
-                      <h4 className={`font-bold text-sm md:text-base tracking-tight truncate mb-1 ${stage.progress === 100 ? 'text-slate-300 line-through font-medium' : 'text-[#2D362E]'}`}>{order.title}</h4>
+                    <div className="flex-1 min-w-0 px-1 md:px-2">
+                      <h4 className={`font-black text-[15px] md:text-lg tracking-tight truncate leading-tight mb-1.5 md:mb-2 ${stage.progress === 100 ? 'text-slate-300 line-through font-medium' : 'text-[#2D362E]'}`}>{order.title}</h4>
                       <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
                         <span className="px-1 py-0.5 bg-[#EDF1EE] text-[#4F6D58] border border-[#D1D6D1] rounded text-[8px] md:text-[9px] font-black uppercase tracking-tighter shrink-0">{getShortSource(order.source)}</span>
-                        <div className="flex items-center gap-1 ml-1 min-w-0">
+                        <div className="flex items-center gap-1.5 ml-1 min-w-0">
                           <div className="w-10 h-1 bg-slate-200/50 rounded-full overflow-hidden shrink-0">
                             <div className="h-full transition-all duration-700" style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} />
                           </div>
-                          <span className="text-[9px] font-bold text-slate-300">{stage.progress}%</span>
+                          <span className="text-[9px] font-bold text-slate-300 uppercase">{stage.progress}%</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="ml-auto flex items-center gap-2 md:gap-4 shrink-0">
-                      <div className="hidden sm:flex flex-col gap-2">
+                      <div className="hidden sm:flex flex-col gap-1.5 md:gap-2">
                         <button onClick={(e) => togglePriority(order, e)} className={`p-1.5 rounded-lg border transition-all ${isHigh ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-200 border-slate-100 hover:text-amber-400'}`}>
                           <Star className={`w-3.5 h-3.5 ${isHigh ? 'fill-red-500' : ''}`} />
                         </button>
@@ -177,12 +177,12 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
                       </div>
                       
                       <button onClick={(e) => handleExportSingleICS(order, e)} className="p-1.5 md:p-2 rounded-lg border bg-white text-[#3A5A40] border-[#D1D6D1] hover:bg-slate-50 shadow-sm flex items-center justify-center shrink-0">
-                        <CalendarPlus className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                        <CalendarPlus className="w-4 h-4 md:w-5 md:h-5" />
                       </button>
 
-                      <div className="flex flex-col items-end min-w-[60px] md:min-w-[80px]">
+                      <div className="flex flex-col items-end min-w-[60px] md:min-w-[84px]">
                         <div className="text-base md:text-lg font-black text-[#2D362E] tracking-tighter leading-none">¥{order.totalPrice.toLocaleString()}</div>
-                        <span className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase mt-1 tracking-widest">Revenue</span>
+                        <span className="text-[8px] md:text-[9px] font-bold text-slate-300 uppercase mt-1.5 tracking-widest">Revenue</span>
                       </div>
                     </div>
                   </div>
