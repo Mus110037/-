@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Calendar, ListTodo, Wallet, Bot, Settings } from 'lucide-react';
+import { LayoutDashboard, Calendar, ListTodo, Wallet, Settings } from 'lucide-react';
 
 interface MobileNavProps {
   activeTab: string;
@@ -13,7 +13,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, setActiveTab }) => {
     { id: 'calendar', icon: Calendar, label: '日历' },
     { id: 'orders', icon: ListTodo, label: '企划' },
     { id: 'finance', icon: Wallet, label: '财务' },
-    { id: 'settings', icon: Settings, label: '设置' }, // 补全设置入口
+    { id: 'settings', icon: Settings, label: '设置' },
   ];
 
   return (
@@ -27,7 +27,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, setActiveTab }) => {
               activeTab === item.id ? 'text-slate-900 font-bold' : 'text-slate-400'
             }`}
           >
-            <item.icon className={`w-5 h-5 mb-1 transition-transform ${activeTab === item.id ? 'scale-110' : ''}`} />
+            <item.icon className={`w-5 h-5 mb-1 transition-transform ${activeTab === item.id ? 'scale-110 text-[#A3B18A]' : ''}`} />
             <span className="text-[9px] font-bold tracking-tighter uppercase">{item.label}</span>
             {activeTab === item.id && (
               <div className="absolute -top-0 w-8 h-0.5 bg-slate-900 rounded-full"></div>

@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Order, AppSettings } from '../types';
 import { Wallet, Calendar as CalendarIcon, Sparkles, Star, LayoutGrid, Zap, CheckCircle2, GripVertical } from 'lucide-react';
-import { isWithinInterval, addDays, parseISO, format } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
+// Fix: Removed parseISO which was reported as missing; using native Date parsing instead.
+import { isWithinInterval, addDays, format } from 'date-fns';
+import { zhCN } from 'date-fns/locale/zh-CN';
 
 interface DashboardProps {
   orders: Order[];
@@ -44,7 +45,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
 
   const upcomingOrders = orders
     .filter(o => getStageConfig(o).progress < 100)
-    .sort((a, b) => parseISO(a.deadline).getTime() - parseISO(b.deadline).getTime())
+    .sort((a, b) => new Date(a.deadline.replace(/-/g, '/')).getTime() - new Date(b.deadline.replace(/-/g, '/')).getTime())
     .slice(0, 5);
 
   const handlePriorityDragStart = (idx: number) => {
@@ -109,7 +110,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                     return (
                       <div key={o.id} className="flex items-center gap-4 p-4 hover:bg-[#F5F5F0] dark:hover:bg-[#252931] rounded-2xl transition-all border border-transparent hover:border-[#E0DDD5] dark:hover:border-[#3A3F48]">
                         <div className="flex flex-col items-center justify-center w-10 h-10 bg-[#333333] dark:bg-[#E0E0E0] rounded-xl shrink-0">
-                          <span className="text-base font-black text-white dark:text-[#0F1115] leading-none">{format(parseISO(o.deadline), 'd')}</span>
+                          <span className="text-base font-black text-white dark:text-[#0F1115] leading-none">{format(new Date(o.deadline.replace(/-/g, '/')), 'd')}</span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5">
@@ -137,7 +138,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
           <div key="priority" className={`${baseClass}`}>
             <div className="p-6 border-b border-[#E0DDD5] dark:border-[#2D3139] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Star className="w-4 h-4 text-[#A3B18A] fill-[#A3B18A]" />
+                <span className="w-4 h-4 text-[#A3B18A] fill-[#A3B18A]">★</span>
                 <h3 className="font-bold text-[#333333] dark:text-[#E0E0E0] text-sm uppercase tracking-tight">星标高优项目</h3>
               </div>
               <button onClick={() => setIsManagingPriority(!isManagingPriority)} className="text-[9px] font-bold text-[#333333] dark:text-[#E0E0E0] uppercase tracking-widest bg-[#F5F5F0] dark:bg-[#2D3139] px-4 py-2 rounded-xl border border-[#E0DDD5] dark:border-[#3A3F48] hover:bg-[#EAE8E0] transition-all">

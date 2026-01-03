@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart as RePieChart, Pie, AreaChart, Area } from 'recharts';
 import { Order, AppSettings } from '../types';
 import { DollarSign, TrendingUp, PieChart, LayoutGrid, Activity } from 'lucide-react';
-import { parseISO, format, startOfYear, eachMonthOfInterval, endOfYear } from 'date-fns';
+// Fix: Removed parseISO and startOfYear reported as missing; using native Date for startOfYear.
+import { format, eachMonthOfInterval, endOfYear } from 'date-fns';
 
 interface FinanceViewProps {
   orders: Order[];
@@ -43,7 +44,8 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
 
   const computeTrendData = () => {
     const now = new Date();
-    const start = startOfYear(now);
+    // Fix: Using native Date for startOfYear.
+    const start = new Date(now.getFullYear(), 0, 1);
     const end = endOfYear(now);
     const months = eachMonthOfInterval({ start, end });
     
@@ -95,7 +97,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
       return (
         <div key="typeChart" className={`${baseClass} p-10 lg:col-span-1`}>
           <div className="flex items-center gap-3 mb-10">
-            <PieChart className="w-5 h-5 text-[#A3B18A]" />
+            <span className="w-5 h-5 text-[#A3B18A]">○</span>
             <h3 className="text-sm font-bold text-[#333333] dark:text-[#E0E0E0] uppercase tracking-tight">画种产值占比</h3>
           </div>
           <div className="h-64">
@@ -181,7 +183,7 @@ const FinanceView: React.FC<FinanceViewProps> = ({ orders, settings }) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex justify-end">
-        <button onClick={() => setIsEditing(!isEditing)} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${isEditing ? 'bg-[#333333] dark:bg-[#E0E0E0] text-white dark:text-[#0F1115]' : 'bg-white dark:bg-[#1A1D23] text-[#8E8B82] dark:text-[#8E9AAF] border-[#E0DDD5] dark:border-[#2D3139]'}`}>
+        <button onClick={() => setIsEditing(!isEditing)} className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all ${isEditing ? 'bg-[#333333] dark:bg-[#E0E0E0] text-white dark:text-[#0F1115]' : 'bg-white dark:bg-[#1A1D23] text-[#8E8B82] dark:text-[#8E9AAF] border-[#E0DDD5] dark:border-[#2D3139]'}`}>
           <LayoutGrid className="w-4 h-4" /> {isEditing ? '锁定模块' : '配置图表'}
         </button>
       </div>

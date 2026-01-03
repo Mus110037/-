@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
+// Fix: Removed startOfMonth, parseISO, subMonths reported as missing from date-fns.
+import { format, endOfMonth, eachDayOfInterval, isSameDay, addMonths } from 'date-fns';
+import { zhCN } from 'date-fns/locale/zh-CN';
 import { Order, AppSettings } from '../types';
 import { ChevronLeft, ChevronRight, Smartphone, Wallet, CheckCircle2 } from 'lucide-react';
 
@@ -14,7 +15,8 @@ interface CalendarViewProps {
 const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settings }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   
-  const start = startOfMonth(currentDate);
+  // Fix: Using native Date for startOfMonth.
+  const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const end = endOfMonth(currentDate);
   const days = eachDayOfInterval({ start, end });
 
@@ -32,7 +34,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
   };
 
   // 统计当月金额
-  const currentMonthOrders = orders.filter(o => format(parseISO(o.deadline), 'yyyy-MM') === format(currentDate, 'yyyy-MM'));
+  // Fix: Using native Date parsing instead of parseISO.
+  const currentMonthOrders = orders.filter(o => format(new Date(o.deadline.replace(/-/g, '/')), 'yyyy-MM') === format(currentDate, 'yyyy-MM'));
   const monthProjected = currentMonthOrders.reduce((sum, o) => sum + o.totalPrice, 0);
   const monthActual = currentMonthOrders.filter(o => getStageConfig(o.progressStage).progress === 100).reduce((sum, o) => sum + calculateActual(o), 0);
 
@@ -80,7 +83,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
           <div className="flex items-center gap-2 md:gap-4">
             <h2 className="text-sm md:text-lg font-bold text-slate-900 tracking-tight">{format(currentDate, 'yyyy年 MMMM', { locale: zhCN })}</h2>
             <div className="flex items-center gap-0.5 bg-slate-50 p-1 rounded-lg border border-slate-200">
-              <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-1 hover:bg-white rounded-md transition-all text-slate-400 hover:text-slate-900"><ChevronLeft className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-white rounded-md transition-all text-slate-400 hover:text-slate-900"><ChevronLeft className="w-3.5 h-3.5" /></button>
               <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:bg-white rounded-md transition-all text-slate-400 hover:text-slate-900"><ChevronRight className="w-3.5 h-3.5" /></button>
             </div>
           </div>
@@ -92,7 +95,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
             <div key={day} className="bg-white py-2 md:py-3 text-center text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest">{day}</div>
           ))}
           {days.map((day, i) => {
-            const dayOrders = orders.filter(o => isSameDay(parseISO(o.deadline), day));
+            const dayOrders = orders.filter(o => isSameDay(new Date(o.deadline.replace(/-/g, '/')), day));
             const isToday = isSameDay(day, new Date());
             return (
               <div key={i} className={`bg-white min-h-[60px] md:min-h-[140px] p-1 md:p-1.5 transition-colors border-b border-r border-slate-50 ${isToday ? 'bg-slate-50/50' : ''}`}>

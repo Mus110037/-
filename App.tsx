@@ -16,11 +16,9 @@ import { getSchedulingInsights } from './services/geminiService';
 
 const STORAGE_KEY = 'artnexus_orders_v5';
 const SETTINGS_KEY = 'artnexus_settings_v5';
-const THEME_KEY = 'artnexus_theme_v5';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem(THEME_KEY) === 'dark');
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : SAMPLE_ORDERS;
@@ -49,14 +47,10 @@ const App: React.FC = () => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
 
+  // 确保移除任何残余的 dark 类
   useEffect(() => {
-    localStorage.setItem(THEME_KEY, isDarkMode ? 'dark' : 'light');
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
+    document.documentElement.classList.remove('dark');
+  }, []);
 
   useEffect(() => {
     const loadInsights = async () => {
@@ -99,15 +93,15 @@ const App: React.FC = () => {
       case 'settings': return <SettingsView settings={settings} setSettings={setSettings} />;
       case 'ai-assistant':
         return (
-          <div className="bg-[#EAE8E0] dark:bg-[#1A1D23] rounded-[2rem] p-12 border border-[#D9D5CB] dark:border-[#2D3139] max-w-2xl mx-auto mt-4 text-center">
-            <div className="bg-[#333333] dark:bg-[#E0E0E0] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl">
-              <BrainCircuit className="w-8 h-8 text-[#F5F5F0] dark:text-[#0F1115]" />
+          <div className="bg-[#EAE8E0] rounded-[2rem] p-12 border border-[#D9D5CB] max-w-2xl mx-auto mt-4 text-center">
+            <div className="bg-[#333333] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-8 shadow-xl">
+              <BrainCircuit className="w-8 h-8 text-[#F5F5F0]" />
             </div>
-            <h2 className="text-xl font-bold mb-4 text-[#333333] dark:text-[#E0E0E0] tracking-tight uppercase">AI 排单管家</h2>
-            <p className="text-[11px] text-[#8E8B82] dark:text-[#8E9AAF] mb-10 leading-relaxed font-bold uppercase tracking-widest">分析创作周期，优化交付方案</p>
+            <h2 className="text-xl font-bold mb-4 text-[#333333] tracking-tight uppercase">AI 排单管家</h2>
+            <p className="text-[11px] text-[#8E8B82] mb-10 leading-relaxed font-bold uppercase tracking-widest">分析创作周期，优化交付方案</p>
             <button 
               onClick={() => getSchedulingInsights(orders).then(setInsights)}
-              className="w-full bg-[#333333] dark:bg-[#E0E0E0] text-white dark:text-[#0F1115] py-4 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg"
+              className="w-full bg-[#333333] text-white py-4 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg"
             >
               <Sparkles className="w-4 h-4 inline mr-2" /> 运行智能分析
             </button>
@@ -118,14 +112,14 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`flex min-h-screen transition-colors duration-500 ${isDarkMode ? 'bg-[#0F1115] text-[#E0E0E0]' : 'bg-[#F5F5F0] text-[#333333]'}`}>
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+    <div className="flex min-h-screen bg-[#F5F5F0] text-[#333333]">
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-1 p-4 md:p-10 pb-24 lg:pb-10 overflow-y-auto custom-scrollbar">
         <header className="flex items-center justify-between mb-8">
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-black text-[#333333] dark:text-[#E0E0E0] truncate tracking-tight uppercase">
+            <h1 className="text-xl md:text-2xl font-black text-[#2D2D2A] truncate tracking-tight uppercase">
               {activeTab === 'dashboard' ? 'Overview' : 
                activeTab === 'calendar' ? 'Schedule' : 
                activeTab === 'orders' ? 'Projects' : 
@@ -135,13 +129,13 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-2">
-            <button onClick={() => setIsSocialModalOpen(true)} className="p-3 bg-white dark:bg-[#1A1D23] text-[#8E8B82] dark:text-[#8E9AAF] border border-[#E0DDD5] dark:border-[#2D3139] rounded-xl hover:text-[#333333] dark:hover:text-[#E0E0E0] transition-all shadow-sm">
+            <button onClick={() => setIsSocialModalOpen(true)} className="p-3 bg-white text-[#8E8B82] border border-[#E0DDD5] rounded-xl hover:text-[#2D2D2A] transition-all shadow-sm">
               <Share2 className="w-4 h-4" /> 
             </button>
-            <button onClick={() => setIsSyncModalOpen(true)} className="p-3 bg-white dark:bg-[#1A1D23] text-[#8E8B82] dark:text-[#8E9AAF] border border-[#E0DDD5] dark:border-[#2D3139] rounded-xl hover:text-[#333333] dark:hover:text-[#E0E0E0] transition-all shadow-sm">
+            <button onClick={() => setIsSyncModalOpen(true)} className="p-3 bg-white text-[#8E8B82] border border-[#E0DDD5] rounded-xl hover:text-[#2D2D2A] transition-all shadow-sm">
               <FileSpreadsheet className="w-4 h-4" /> 
             </button>
-            <button onClick={() => setIsCreateModalOpen(true)} className="p-3 bg-[#333333] dark:bg-[#E0E0E0] text-white dark:text-[#0F1115] rounded-xl flex items-center gap-2 hover:opacity-90 transition-all shadow-md">
+            <button onClick={() => setIsCreateModalOpen(true)} className="p-3 bg-[#333333] text-white rounded-xl flex items-center gap-2 hover:opacity-90 transition-all shadow-md">
               <Plus className="w-4 h-4" /> 
               <span className="hidden md:inline font-bold text-[11px] uppercase tracking-widest">录入企划</span>
             </button>
@@ -149,8 +143,8 @@ const App: React.FC = () => {
         </header>
 
         {insights && (
-          <div className="mb-8 p-5 bg-white dark:bg-[#1A1D23] border border-[#E0DDD5] dark:border-[#2D3139] rounded-2xl text-[#333333] dark:text-[#E0E0E0] flex items-start gap-4 shadow-sm">
-            <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-[#A3B18A] dark:text-[#A3B18A]" />
+          <div className="mb-8 p-5 bg-white border border-[#E0DDD5] rounded-2xl text-[#2D2D2A] flex items-start gap-4 shadow-sm">
+            <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-[#A3B18A]" />
             <p className="text-[11px] font-bold leading-relaxed tracking-wide">{insights}</p>
           </div>
         )}
