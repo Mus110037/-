@@ -4,12 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>画饼 HuaBing - 别看了，快去赶稿</title>
+    <title>画饼 Piecasso - 别看了，快去赶稿</title>
     
     <!-- PWA Meta Tags & Apple Optimization -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="画饼HuaBing">
+    <meta name="apple-mobile-web-app-title" content="画饼Piecasso">
     <meta name="theme-color" content="#4B5E4F">
     <meta name="format-detection" content="telephone=no">
     
@@ -26,7 +26,7 @@
             font-family: 'Plus Jakarta Sans', 'Noto Sans SC', sans-serif; 
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: contain;
-            background-color: #F4F1EA; 
+            background-color: #EAE4D7; /* Updated background color to retro texture */
             color: #2C332D;
             padding-top: env(safe-area-inset-top);
             line-height: 1.6;
@@ -39,11 +39,83 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #D6D2C4; border-radius: 10px; }
         
-        html { background-color: #4B5E4F; height: 100%; overflow: hidden; }
+        html { 
+          background-color: #4B5E4F; /* Keep the accent color for overscroll/outer edge */ 
+          height: 100%; 
+          overflow: hidden; 
+        }
         body { height: 100%; overflow-y: auto; overflow-x: hidden; }
         
-        /* 增加一点面包店的温馨感 */
         ::selection { background: #D4A373; color: white; }
+
+        /* Custom shadows for a "baked cookie" feel */
+        .card-baked-shadow {
+            box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.06), 0px 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        .card-baked-subtle-shadow {
+            box-shadow: 0px 4px 16px rgba(0, 0, 0, 0.04), 0px 1px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        /* Global Drag & Drop Styles (Enhanced) */
+        .drag-active {
+          opacity: 0.4; /* Make it more transparent when dragging */
+          transform: scale(1.05) rotate(2deg); /* More pronounced lift and rotation */
+          box-shadow: 0px 16px 48px rgba(0, 0, 0, 0.2), 0px 4px 16px rgba(0, 0, 0, 0.1); /* Stronger shadow */
+          border-color: #D4A373 !important; /* Highlight border of dragged item */
+          z-index: 1000; /* Ensure dragged item is on top */
+          transition: transform 0.2s ease-out, opacity 0.2s ease-out, box-shadow 0.2s ease-out; /* Smooth transition for visual changes */
+        }
+        .drag-over-target {
+          border-width: 3px !important; /* Thicker dashed border */
+          border-style: dashed !important;
+          border-color: #D4A373 !important;
+          background-color: #D4A37320 !important; /* Slightly more opaque background highlight */
+          transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, border-width 0.2s ease-in-out;
+        }
+
+        /* Toggle Switch Styles - Moved from SettingsView.tsx */
+        .toggle-switch {
+          position: relative;
+          display: inline-block;
+          width: 50px; /* Adjusted width */
+          height: 28px; /* Adjusted height */
+        }
+        .toggle-switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        .toggle-slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 28px; /* Adjusted border-radius */
+        }
+        .toggle-slider:before {
+          position: absolute;
+          content: "";
+          height: 20px; /* Adjusted height */
+          width: 20px; /* Adjusted width */
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: .4s;
+          border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+          background-color: #4B5E4F;
+        }
+        input:focus + .toggle-slider {
+          box-shadow: 0 0 1px #4B5E4F;
+        }
+        input:checked + .toggle-slider:before {
+          transform: translateX(22px); /* Adjusted translation */
+        }
     </style>
 <script type="importmap">
 {
@@ -58,7 +130,10 @@
     "recharts": "https://esm.sh/recharts@^3.6.0",
     "vite": "https://esm.sh/vite@^7.3.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "xlsx": "https://esm.sh/xlsx@0.18.5"
+    "xlsx": "https://esm.sh/xlsx@0.18.5",
+    "qrcode": "https://esm.sh/qrcode@^1.5.3",
+    "@zxing/library": "https://esm.sh/@zxing/library@^0.21.0",
+    "marked": "https://esm.sh/marked@^17.0.1"
   }
 }
 </script>

@@ -13,19 +13,19 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     { id: 'calendar', label: '烘焙日历', icon: Calendar },
     { id: 'orders', label: '饼干仓库', icon: ListTodo },
     { id: 'finance', label: '账本收支', icon: Wallet },
-    { id: 'ai-assistant', label: 'AI 饼托', icon: Bot },
+    // { id: 'ai-assistant', label: 'AI 饼托', icon: Bot }, // 移除 AI 饼托入口
     { id: 'settings', label: '烤箱设置', icon: Settings },
   ];
 
   return (
-    <div className="hidden lg:flex w-64 bg-[#EDE9DF] border-r border-[#D6D2C4] h-screen flex-col sticky top-0 shadow-[1px_0_0_rgba(0,0,0,0.02)] transition-colors">
+    <div className="hidden lg:flex w-64 bg-[#FDFBF7] border-r border-[#D6D2C4] h-screen flex-col sticky top-0 shadow-[1px_0_0_rgba(0,0,0,0.02)] transition-colors">
       <div className="p-8 mb-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-[#D4A373] text-[#FDFBF7] rounded-2xl shadow-lg rotate-3">
              <Cookie className="w-5 h-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-xl font-black tracking-tight text-[#2C332D]">画饼 HuaBing</span>
+            <span className="text-xl font-black tracking-tight text-[#2C332D]">画饼 Piecasso</span>
             <span className="text-[8px] text-[#7A8B7C] font-black uppercase tracking-[0.25em] mt-0.5">Baker's Studio</span>
           </div>
         </div>

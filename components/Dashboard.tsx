@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
-import { Order, AppSettings } from '../types';
-import { Wallet, Calendar as CalendarIcon, ChevronUp, ChevronDown, Plus, Star, X, Settings2, Trash2, CalendarPlus, Target, Brush, MinusCircle, Cookie } from 'lucide-react';
-import { format } from 'date-fns';
+import React, { useState, useRef } from 'react';
+import { Order, AppSettings, CommissionType } from '../types';
+import { Plus, Cookie, Target, Sprout, Leaf, X, Check, Wallet, CheckCircle2, Clock, Calendar, Briefcase, User, Sparkles, Loader2, GripVertical } from 'lucide-react'; 
+import { format, addDays, parseISO } from 'date-fns'; // Added parseISO
 import { zhCN } from 'date-fns/locale/zh-CN';
 
 interface DashboardProps {
@@ -13,69 +13,20 @@ interface DashboardProps {
   onUpdateOrder: (order: Order) => void;
   settings: AppSettings;
   onQuickAdd: () => void;
+  schedulingInsights: string; // Add prop for insights
+  isSchedulingAiLoading: boolean; // Add prop for AI loading state
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdatePriorityIds, onEditOrder, onUpdateOrder, settings, onQuickAdd }) => {
-  const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  
-  const [moduleOrder, setModuleOrder] = useState<string[]>(() => {
-    const saved = localStorage.getItem('artpulse_dashboard_layout');
-    return saved ? JSON.parse(saved) : ['stats', 'priority', 'upcoming'];
-  });
+const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdatePriorityIds, onEditOrder, onUpdateOrder, settings, onQuickAdd, schedulingInsights, isSchedulingAiLoading }) => {
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem('artpulse_dashboard_layout', JSON.stringify(moduleOrder));
-  }, [moduleOrder]);
-
-  const handleExportSingleICS = (order: Order, e: React.MouseEvent) => {
-    e.stopPropagation();
-    let icsContent = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//HuaBing//Pro//CN\nMETHOD:PUBLISH\n";
-    const deadline = order.deadline.replace(/-/g, '');
-    icsContent += "BEGIN:VEVENT\n";
-    icsContent += `UID:${order.id}@huabing.pro\n`;
-    icsContent += `DTSTAMP:${format(new Date(), "yyyyMMdd'T'HHmmss'Z'")}\n`;
-    icsContent += `DTSTART;VALUE=DATE:${deadline}\n`;
-    icsContent += `DTEND;VALUE=DATE:${deadline}\n`;
-    icsContent += `SUMMARY:[画饼] ${order.title}\n`;
-    icsContent += `DESCRIPTION:熟练度: ${order.progressStage}\\n金币: ¥${order.totalPrice}\n`;
-    icsContent += "END:VEVENT\nEND:VCALENDAR";
-    
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.setAttribute('download', `${order.title}_日程.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  // Drag and Drop Ref for Priority Orders: stores the ID of the dragged item
+  const draggedPriorityOrderItemId = useRef<string | null>(null);
+  // Track if a touch drag is active to prevent mixed behaviors
+  const isTouchDragging = useRef(false);
 
   const getStageConfig = (order: Order) => {
-    return settings.stages.find(s => s.name === (order.progressStage || '未开始')) || settings.stages[0];
-  };
-
-  const highPriorityOrdersRaw = orders.filter(o => o.priority === '高' && getStageConfig(o).progress < 100);
-  const sortedPriorityOrders = [...highPriorityOrdersRaw].sort((a, b) => {
-    const idxA = priorityOrderIds.indexOf(a.id);
-    const idxB = priorityOrderIds.indexOf(b.id);
-    if (idxA === -1 && idxB === -1) return 0;
-    if (idxA === -1) return 1;
-    if (idxB === -1) return -1;
-    return idxA - idxB;
-  });
-
-  const movePriorityItem = (idx: number, direction: 'up' | 'down') => {
-    const newIds = sortedPriorityOrders.map(o => o.id);
-    const target = direction === 'up' ? idx - 1 : idx + 1;
-    if (target < 0 || target >= newIds.length) return;
-    [newIds[idx], newIds[target]] = [newIds[target], newIds[idx]];
-    onUpdatePriorityIds(newIds);
-  };
-
-  const handleRemoveFromPriority = (order: Order, e: React.MouseEvent) => {
-    e.stopPropagation();
-    onUpdateOrder({ ...order, priority: '中' });
-    onUpdatePriorityIds(priorityOrderIds.filter(id => id !== order.id));
+    return settings.stages.find(s => s.name === order.progressStage) || settings.stages[0];
   };
 
   const calculateActual = (o: Order) => {
@@ -83,194 +34,416 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
     return o.totalPrice * (1 - source.fee / 100);
   };
 
-  const monthlyActual = orders.filter(o => getStageConfig(o).progress === 100).reduce((sum, o) => sum + calculateActual(o), 0);
-  const upcomingOrders = orders
-    .filter(o => getStageConfig(o).progress < 100)
-    .sort((a, b) => new Date(a.deadline.replace(/-/g, '/')).getTime() - new Date(b.deadline.replace(/-/g, '/')).getTime())
+  const now = new Date();
+  const currentMonthStr = format(now, 'yyyy-MM');
+  const fourteenDaysFromNow = addDays(now, 14); // Calculate 14 days from now
+
+  // Helper to parse date string safely
+  const parseDateSafe = (dateString: string) => {
+    try {
+      // Assuming deadline is YYYY-MM-DD
+      return parseISO(dateString); 
+    } catch {
+      return null;
+    }
+  };
+
+  // 年度预收总额 (按年份过滤)
+  const annualProjectedRevenue = orders
+    .filter(o => {
+      const orderDate = parseDateSafe(o.deadline);
+      return orderDate && orderDate.getFullYear() === now.getFullYear();
+    })
+    .reduce((sum, o) => sum + calculateActual(o), 0);
+
+  // 当月订单
+  const currentMonthOrders = orders.filter(o => {
+    const orderDate = parseDateSafe(o.deadline);
+    return orderDate && format(orderDate, 'yyyy-MM') === currentMonthStr;
+  });
+
+  // 当月在制企划数量
+  const currentMonthActiveOrdersCount = currentMonthOrders.filter(o => getStageConfig(o).progress < 100).length;
+  // 当月完成企划数量
+  const currentMonthCompletedOrdersCount = currentMonthOrders.filter(o => getStageConfig(o).progress === 100).length;
+  
+  // 所有在制企划（用于优先级选择器）
+  const activeOrders = orders.filter(o => getStageConfig(o).progress < 100);
+  
+  // This will be the actual list being rendered and reordered by D&D
+  const priorityOrders = orders.filter(o => priorityOrderIds.includes(o.id))
+    .sort((a, b) => {
+      return priorityOrderIds.indexOf(a.id) - priorityOrderIds.indexOf(b.id);
+    });
+
+  const selectableOrders = activeOrders.filter(o => !priorityOrderIds.includes(o.id));
+
+  // 最近到期的 5 个企划 (仅限进行中，且截止日期在未来14天内)
+  const upcomingOrders = activeOrders
+    .filter(o => {
+      const deadlineDate = parseDateSafe(o.deadline);
+      return deadlineDate && deadlineDate >= now && deadlineDate <= fourteenDaysFromNow; // Filter for next 14 days
+    })
+    .sort((a, b) => (parseDateSafe(a.deadline)?.getTime() || 0) - (parseDateSafe(b.deadline)?.getTime() || 0))
     .slice(0, 5);
 
-  const nonHighPriorityOrders = orders.filter(o => o.priority !== '高' && getStageConfig(o).progress < 100);
+  const togglePriority = (id: string) => {
+    if (priorityOrderIds.includes(id)) {
+      onUpdatePriorityIds(priorityOrderIds.filter(pid => pid !== id));
+    } else {
+      onUpdatePriorityIds([...priorityOrderIds, id]);
+    }
+  };
 
-  const renderStatsModule = (index: number) => (
-    <div key="stats" className="relative group animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="bg-[#D4A373] px-6 py-5 rounded-2xl text-[#FDFBF7] shadow-lg flex items-center justify-between col-span-1 md:col-span-2">
-          <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-white/20 rounded-xl"><Wallet className="w-5 h-5 text-white" /></div>
-            <div>
-              <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mb-1">饼干预估总额 Total Revenue</p>
-              <p className="text-2xl md:text-3xl font-black tracking-tight tabular-nums">¥{monthlyActual.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#D6D2C4] flex flex-col items-center justify-center shadow-sm">
-             <div className="text-2xl font-black text-[#D4A373] tabular-nums">{orders.filter(o => getStageConfig(o).progress < 100).length}</div>
-             <p className="text-[10px] text-[#7A8B7C] font-black uppercase mt-1">烤箱中</p>
-          </div>
-          <div className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#D6D2C4] flex flex-col items-center justify-center opacity-70 shadow-sm">
-             <div className="text-2xl font-black text-[#7A8B7C] opacity-40 tabular-nums">{orders.filter(o => getStageConfig(o).progress === 100).length}</div>
-             <p className="text-[10px] text-[#7A8B7C] font-black uppercase mt-1">已出炉</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  // --- Drag & Drop Handlers for Priority Orders (Mouse) ---
+  const handlePriorityDragStart = (e: React.DragEvent, id: string) => {
+    if (isTouchDragging.current) return; // Prevent mouse drag if touch drag is active
+    draggedPriorityOrderItemId.current = id;
+    e.dataTransfer.effectAllowed = "move";
+    e.currentTarget.classList.add('drag-active'); // Use global drag-active
+  };
 
-  const renderPriorityModule = (index: number) => (
-    <div key="priority" className="relative group animate-in fade-in duration-500">
-      <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <Cookie className="w-4 h-4 text-[#D4A373]" />
-            <h3 className="font-black text-[#2C332D] text-sm uppercase tracking-widest">急需出炉 | Priority Bake</h3>
-          </div>
-          <button onClick={() => setIsSelectionModalOpen(true)} className="text-[10px] font-black px-4 py-2 rounded-xl border border-[#D6D2C4] bg-[#FDFBF7] text-[#D4A373] hover:border-[#D4A373] transition-all uppercase tracking-widest shadow-sm flex items-center gap-1.5 active:scale-95">
-            <Plus className="w-3.5 h-3.5" /> 加饼
-          </button>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {sortedPriorityOrders.length > 0 ? (
-            sortedPriorityOrders.map((o, idx) => {
-              const stageConfig = getStageConfig(o);
-              return (
-                <div 
-                  key={o.id} 
-                  onClick={() => onEditOrder(o)} 
-                  className="bg-[#FDFBF7] p-4 md:p-5 rounded-2xl border border-[#D6D2C4] shadow-sm hover:border-[#D4A373] transition-all cursor-pointer flex items-center gap-3 md:gap-4 group/item relative overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 p-2 flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                    <button onClick={(e) => { e.stopPropagation(); movePriorityItem(idx, 'up'); }} className="p-1 bg-[#FDFBF7] border rounded shadow-sm hover:bg-slate-50"><ChevronUp className="w-3 h-3 text-[#7A8B7C]" /></button>
-                    <button onClick={(e) => { e.stopPropagation(); movePriorityItem(idx, 'down'); }} className="p-1 bg-[#FDFBF7] border rounded shadow-sm hover:bg-slate-50"><ChevronDown className="w-3 h-3 text-[#7A8B7C]" /></button>
-                    <button onClick={(e) => handleRemoveFromPriority(o, e)} className="p-1 bg-[#FDFBF7] border rounded shadow-sm hover:bg-rose-50 text-rose-400 hover:text-rose-600 border-[#D6D2C4] transition-colors"><MinusCircle className="w-3 h-3" /></button>
-                  </div>
+  const handlePriorityDragEnter = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (draggedPriorityOrderItemId.current !== null && draggedPriorityOrderItemId.current !== id) {
+      e.currentTarget.classList.add('drag-over-target');
+    }
+  };
 
-                  <div className="w-1.5 h-10 rounded-full shrink-0" style={{ backgroundColor: stageConfig.color }} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <div className="w-2 h-2 rounded-full bg-[#D4A373] animate-pulse shrink-0" />
-                      <h4 className="font-black text-[#2C332D] text-[12px] md:text-[17px] break-words tracking-tight leading-tight">{o.title}</h4>
-                    </div>
-                    <div className="w-full h-1.5 bg-[#E8E6DF] rounded-full overflow-hidden">
-                      <div className="h-full transition-all duration-700" style={{ width: `${stageConfig.progress}%`, backgroundColor: stageConfig.color }} />
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0 flex flex-col items-end min-w-[70px]">
-                    <p className="text-[14px] md:text-base font-black text-[#2C332D] tabular-nums tracking-tighter leading-none">¥{o.totalPrice.toLocaleString()}</p>
-                    <p className="text-[9px] md:text-[10px] font-bold text-[#A8A291] uppercase mt-1 tracking-widest">{stageConfig.progress}%</p>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="col-span-1 md:col-span-2 py-12 text-center border-2 border-dashed border-[#D6D2C4] rounded-[2rem] bg-white/20 flex flex-col items-center justify-center gap-2">
-              <Star className="w-5 h-5 text-[#D6D2C4]" />
-              <p className="text-[10px] font-black text-[#A8A291] uppercase tracking-widest">点击“加饼”开始您的创作</p>
-            </div>
-          )}
-        </div>
-      </div>
+  const handlePriorityDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('drag-over-target');
+  };
 
-      {isSelectionModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#1B241D]/60 backdrop-blur-sm" onClick={() => setIsSelectionModalOpen(false)}>
-          <div className="bg-[#FDFBF7] w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-[#D6D2C4] flex justify-between items-center bg-white">
-              <div className="flex items-center gap-2">
-                 <Target className="w-4 h-4 text-[#D4A373]" />
-                 <h4 className="font-black text-[#2C332D] uppercase tracking-tight text-xs">设为重点大饼</h4>
-              </div>
-              <button onClick={() => setIsSelectionModalOpen(false)} className="p-2 text-slate-300 hover:text-slate-900 transition-colors"><X className="w-5 h-5" /></button>
-            </div>
-            <div className="p-4 max-h-[50vh] overflow-y-auto custom-scrollbar space-y-2">
-              {nonHighPriorityOrders.length > 0 ? (
-                nonHighPriorityOrders.map(o => (
-                  <button 
-                    key={o.id}
-                    onClick={() => {
-                      onUpdateOrder({ ...o, priority: '高' });
-                      onUpdatePriorityIds([...priorityOrderIds, o.id]);
-                      setIsSelectionModalOpen(false);
-                    }}
-                    className="w-full flex items-center justify-between p-4 bg-white rounded-2xl border border-[#D6D2C4] hover:border-[#D4A373] transition-all text-left shadow-sm group"
-                  >
-                    <div className="min-w-0">
-                       <p className="font-black text-xs text-[#2C332D] break-words mb-1">{o.title}</p>
-                       <p className="text-[9px] font-bold text-[#A8A291] uppercase tracking-widest">¥{o.totalPrice.toLocaleString()} · {o.progressStage}</p>
-                    </div>
-                    <Plus className="w-4 h-4 text-[#A8A291] group-hover:text-[#D4A373] shrink-0" />
-                  </button>
-                ))
-              ) : (
-                <div className="py-10 text-center">
-                   <Cookie className="w-6 h-6 text-[#D6D2C4] mx-auto mb-2" />
-                   <p className="text-[10px] font-black text-[#A8A291] uppercase tracking-widest">暂无可加入的饼干</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const handlePriorityDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('drag-active');
+    document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target')); // Clear all targets
+    draggedPriorityOrderItemId.current = null;
+  };
 
-  const renderUpcomingModule = (index: number) => (
-    <div key="upcoming" className="relative group animate-in fade-in duration-500">
-      <div className="bg-[#FDFBF7] rounded-[2rem] border border-[#D6D2C4] shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-[#D6D2C4] flex items-center justify-between bg-white">
-          <div className="flex items-center gap-3">
-            <CalendarIcon className="w-4 h-4 text-[#D4A373]" />
-            <h3 className="font-black text-[#2C332D] text-sm uppercase tracking-widest">近期出炉预告</h3>
-          </div>
-        </div>
-        <div className="divide-y divide-slate-100">
-          {upcomingOrders.map(o => (
-            <div key={o.id} onClick={() => onEditOrder(o)} className="flex items-center gap-3 md:gap-5 p-4 md:p-5 hover:bg-[#FAF9F5] transition-all cursor-pointer group">
-              <div className="flex flex-col items-center justify-center w-10 h-10 md:w-11 md:h-11 bg-[#2C332D] rounded-xl shrink-0 shadow-md">
-                <span className="text-sm md:text-base font-black text-[#FDFBF7] leading-none">{format(new Date(o.deadline.replace(/-/g, '/')), 'dd')}</span>
-                <span className="text-[8px] md:text-[10px] font-bold text-[#D4A373] uppercase mt-0.5">{format(new Date(o.deadline.replace(/-/g, '/')), 'MMM', { locale: zhCN })}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className={`w-1.5 h-1.5 rounded-full ${o.priority === '高' ? 'bg-[#D4A373]' : 'bg-[#E8E6DF]'} shrink-0`} />
-                  <h4 className="font-black text-[#2C332D] break-words text-[12px] md:text-base tracking-tight leading-tight">{o.title}</h4>
-                </div>
-                <div className="w-full max-w-[120px] h-1 bg-[#E8E6DF] rounded-full overflow-hidden">
-                   <div className="h-full bg-[#D4A373]" style={{ width: `${getStageConfig(o).progress}%` }} />
-                </div>
-              </div>
-              <div className="text-right flex items-center gap-2 md:gap-3 shrink-0">
-                <button onClick={(e) => handleExportSingleICS(o, e)} className="p-2 border border-[#D6D2C4] rounded-xl text-[#D4A373] hover:bg-slate-50 shrink-0 hidden sm:block shadow-sm transition-all"><CalendarPlus className="w-4 h-4" /></button>
-                <div className="flex flex-col items-end min-w-[75px] md:min-w-[90px]">
-                  <p className="text-[14px] md:text-base font-black text-[#2C332D] tabular-nums tracking-tighter leading-none">¥{o.totalPrice.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-          {upcomingOrders.length === 0 && (
-            <div className="p-10 text-center text-xs font-bold text-[#A8A291] uppercase tracking-widest">暂时没有待出的饼</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  const handlePriorityDrop = (e: React.DragEvent, dropId: string) => {
+    e.preventDefault();
+    if (draggedPriorityOrderItemId.current === null || draggedPriorityOrderItemId.current === dropId) {
+      e.currentTarget.classList.remove('drag-over-target');
+      return;
+    }
+
+    const currentPriorityOrders = [...priorityOrders];
+    const draggedId = draggedPriorityOrderItemId.current;
+
+    const draggedOrderIndex = currentPriorityOrders.findIndex(order => order.id === draggedId);
+    const dropOrderIndex = currentPriorityOrders.findIndex(order => order.id === dropId);
+
+    if (draggedOrderIndex === -1 || dropOrderIndex === -1) {
+        e.currentTarget.classList.remove('drag-over-target');
+        return;
+    }
+
+    const [draggedOrder] = currentPriorityOrders.splice(draggedOrderIndex, 1);
+    currentPriorityOrders.splice(dropOrderIndex, 0, draggedOrder);
+
+    onUpdatePriorityIds(currentPriorityOrders.map(o => o.id));
+    e.currentTarget.classList.remove('drag-over-target');
+  };
+
+  // --- Touch Drag & Drop Handlers for Priority Orders ---
+  const handlePriorityTouchStart = (e: React.TouchEvent, id: string) => {
+    isTouchDragging.current = true;
+    draggedPriorityOrderItemId.current = id;
+    e.currentTarget.classList.add('drag-active'); // Apply visual feedback
+    e.preventDefault(); // Prevent scrolling and other default touch behaviors
+  };
+
+  const handlePriorityTouchEnd = (e: React.TouchEvent) => {
+    e.currentTarget.classList.remove('drag-active'); // Remove visual feedback from dragged item
+    document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target')); // Clear any potential target highlights
+
+    if (!draggedPriorityOrderItemId.current) {
+      isTouchDragging.current = false;
+      return;
+    }
+
+    const touchedElement = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    let dropTargetElement: HTMLElement | null = null;
+
+    // Traverse up to find a droppable parent (the order item div)
+    let currentElement: HTMLElement | null = touchedElement as HTMLElement;
+    while (currentElement && currentElement !== e.currentTarget) { // Don't allow dropping on itself
+        if (currentElement.dataset.orderId) { // Check for a custom data attribute
+            dropTargetElement = currentElement;
+            break;
+        }
+        currentElement = currentElement.parentElement;
+    }
+
+    if (dropTargetElement && dropTargetElement.dataset.orderId) {
+      const dropId = dropTargetElement.dataset.orderId;
+      if (draggedPriorityOrderItemId.current !== dropId) { // Ensure it's not dropped on itself
+        const currentPriorityOrders = [...priorityOrders];
+        const draggedId = draggedPriorityOrderItemId.current;
+
+        const draggedOrderIndex = currentPriorityOrders.findIndex(order => order.id === draggedId);
+        const dropOrderIndex = currentPriorityOrders.findIndex(order => order.id === dropId);
+
+        if (draggedOrderIndex !== -1 && dropOrderIndex !== -1) {
+          const [draggedOrder] = currentPriorityOrders.splice(draggedOrderIndex, 1);
+          currentPriorityOrders.splice(dropOrderIndex, 0, draggedOrder);
+          onUpdatePriorityIds(currentPriorityOrders.map(o => o.id));
+        }
+      }
+    }
+
+    draggedPriorityOrderItemId.current = null;
+    isTouchDragging.current = false;
+    e.preventDefault(); // Keep preventing default to finish the gesture cleanly
+  };
+
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-      <div className="flex justify-end px-1">
-        <button onClick={() => setIsEditMode(!isEditMode)} className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border transition-all ${isEditMode ? 'bg-[#D4A373] text-white border-[#D4A373]' : 'bg-[#FDFBF7] text-[#A8A291] border-[#D6D2C4] hover:border-[#7A8B7C] shadow-sm'}`}>
-          <Settings2 className="w-4 h-4" />
-          {isEditMode ? '锁定布局' : '调整铺位布局'}
-        </button>
+    <div className="space-y-6 animate-in fade-in duration-1000 pb-32">
+      {/* AI 见解 / 加载动画 */}
+      {settings.showAiUI && isSchedulingAiLoading && (
+        <div className="mb-6 p-4 bg-[#FDFBF7] border border-[#D6D2C4] rounded-xl text-[#2D3A30] flex items-center justify-center gap-3 card-baked-shadow animate-in fade-in slide-in-from-left-2">
+          <Loader2 className="w-4 h-4 animate-spin text-[#4B5E4F]" />
+          <p className="text-[11px] font-bold leading-relaxed tracking-wide text-[#4B5E4F]">AI 正在生成见解...</p>
+        </div>
+      )}
+      {settings.showAiUI && schedulingInsights && !isSchedulingAiLoading && (
+        <div className="mb-6 p-4 bg-[#FDFBF7] border border-[#D6D2C4] rounded-xl text-[#2D3A30] flex items-start gap-4 card-baked-shadow animate-in fade-in slide-in-from-left-2">
+          <Sparkles className="w-4 h-4 mt-1 flex-shrink-0 text-[#4B5E4F]" />
+          <p className="text-[11px] font-bold leading-relaxed tracking-wide">{schedulingInsights}</p>
+        </div>
+      )}
+
+      {/* 核心数据卡片 */}
+      {/* 调整为桌面端 4 列布局，年度预收占 2 列, 月度概览各占 1 列 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-1 md:px-4">
+        {/* 年度预收卡片 */}
+        <div className="bg-[#4B5E4F] p-6 rounded-[1.75rem] text-[#FDFBF7] shadow-xl col-span-2 md:col-span-2 flex flex-col justify-between relative overflow-hidden group"
+             style={{ backgroundImage: 'radial-gradient(circle at 100% 0%, rgba(255,255,255,0.08) 0%, transparent 50%)' }} // Subtle baked spot
+        >
+          {/* Enhanced Cookie Icon */}
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-45 transition-transform duration-1000 scale-125">
+             <Cookie className="w-36 h-36" />
+          </div>
+          <div className="relative z-10">
+            <p className="text-[8px] font-black uppercase tracking-[0.4em] text-[#D4A373] mb-4">{now.getFullYear()} 年度预收 ANNUAL REVENUE</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-[10px] font-black opacity-40">¥</span>
+              <span className="text-3xl md:text-5xl font-black tracking-tight leading-none text-shadow-sm">{annualProjectedRevenue.toLocaleString()}</span> {/* Added text-shadow */}
+            </div>
+          </div>
+          <div className="mt-6 flex items-center gap-2 relative z-10">
+            <div className="px-2.5 py-1 bg-[#FDFBF7]/10 rounded-full border border-[#FDFBF7]/10 flex items-center gap-1.5">
+               <Leaf className="w-2.5 h-2.5 text-[#D4A373]" />
+               <span className="text-[9px] font-bold text-[#FDFBF7]/70 uppercase tracking-widest">烘焙引擎运作中</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 当月在制企划卡片 */}
+        <div className="bg-[#FDFBF7] p-3 md:p-5 rounded-2xl border border-[#D1D6D1] card-baked-shadow flex items-center gap-3 md:gap-4 col-span-1 relative overflow-hidden">
+          {/* Subtle background cookie icon */}
+          <Cookie className="absolute -bottom-2 -right-2 w-10 h-10 text-[#D6D2C4]/10 rotate-12" /> 
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-[#FDFBF7] rounded-xl flex items-center justify-center text-[#4B5E4F] shrink-0 border border-[#D1D9D3]"><Sprout className="w-4 h-4" /></div> {/* Changed icon to Sprout */}
+          <div className="min-w-0">
+            <p className="text-[7px] md:text-[9px] font-black text-[#4B5E4F]/60 uppercase tracking-widest">当月在制</p>
+            <p className="text-sm md:text-2xl font-black text-[#2D3A30] truncate tracking-tighter">{currentMonthActiveOrdersCount}</p>
+          </div>
+        </div>
+
+        {/* 当月完成企划卡片 (新增) */}
+        <div className="bg-[#FDFBF7] p-3 md:p-5 rounded-2xl border border-[#D1D6D1] card-baked-shadow flex items-center gap-3 md:gap-4 col-span-1 relative overflow-hidden">
+          {/* Subtle background cookie icon */}
+          <Cookie className="absolute -bottom-2 -right-2 w-10 h-10 text-[#D6D2C4]/10 rotate-12" />
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-[#4B5E4F] rounded-xl flex items-center justify-center text-white shrink-0 shadow-md"><CheckCircle2 className="w-4 h-4" /></div>
+          <div className="min-w-0">
+            <p className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">当月完成</p>
+            <p className="text-sm md:text-2xl font-black text-[#2D3A30] truncate tracking-tighter">{currentMonthCompletedOrdersCount}</p>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-8">
-        {moduleOrder.map((moduleId, index) => {
-          if (moduleId === 'stats') return renderStatsModule(index);
-          if (moduleId === 'priority') return renderPriorityModule(index);
-          if (moduleId === 'upcoming') return renderUpcomingModule(index);
-          return null;
-        })}
+      {/* 紧急烘焙 & 最近到期 区域 - 桌面端两列，移动端单列堆叠 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-1 md:px-4">
+        {/* 紧急烘焙区域 - 现在是左侧一列 */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2">
+               <div className="w-6 h-6 rounded-lg bg-[#4B5E4F]/5 flex items-center justify-center">
+                 <Target className="w-3 h-3 text-[#4B5E4F]" />
+               </div>
+               <h3 className="font-black text-[#2C332D] text-[10px] uppercase tracking-[0.2em] text-[#4B5E4F]">紧急烘焙 | Top Focus</h3>
+            </div>
+            <div className="flex items-center gap-2">
+               <button 
+                 onClick={() => setIsSelectorOpen(!isSelectorOpen)} 
+                 className={`p-2.5 rounded-xl transition-all shadow-md ${isSelectorOpen ? 'bg-[#4B5E4F] text-white' : 'bg-[#FDFBF7] text-[#4B5E4F] border border-[#E2E8E4]'}`}
+                 aria-label="切换项目选择器"
+               >
+                 <Plus className={`w-4 h-4 transition-transform ${isSelectorOpen ? 'rotate-45' : ''}`} />
+               </button>
+            </div>
+          </div>
+          
+          {/* 项目选择器 */}
+          {isSelectorOpen && (
+            <div className="px-1 animate-in slide-in-from-top-2 duration-300">
+              <div className="bg-[#FDFBF7] p-4 rounded-[1.5rem] border border-[#D6D2C4] card-baked-shadow space-y-3">
+                <p className="text-[8px] font-bold text-[#A8A291] uppercase tracking-widest px-1">从在制企划中选择...</p>
+                <div className="max-h-48 overflow-y-auto custom-scrollbar space-y-1.5">
+                  {selectableOrders.length > 0 ? selectableOrders.map(o => {
+                    const stage = getStageConfig(o);
+                    return (
+                      <button 
+                        key={o.id} 
+                        onClick={() => togglePriority(o.id)}
+                        className="w-full flex items-center justify-between p-2.5 rounded-xl bg-[#F4F1EA]/50 hover:bg-[#F4F1EA] transition-all text-left group"
+                        aria-label={`添加 ${o.title} 到紧急烘焙`}
+                      >
+                        <div className="min-w-0 pr-2 flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                          <div className="min-w-0">
+                            <p className="text-[12px] md:text-base font-bold text-[#2C332D] truncate">{o.title}</p>
+                            <p className="text-[8px] md:text-xs font-bold text-[#A8A291] uppercase">{o.progressStage}</p>
+                          </div>
+                        </div>
+                        <Check className="w-3.5 h-3.5 text-[#4B5E4F] opacity-0 group-hover:opacity-100" />
+                      </button>
+                    );
+                  }) : (
+                    <div className="p-4 text-center bg-[#FDFBF7] rounded-[1.5rem] border border-[#D6D2C4] card-baked-subtle-shadow">
+                      <Cookie className="w-6 h-6 text-[#D6D2C4] mx-auto mb-2 opacity-30" />
+                      <p className="text-[9px] font-black text-[#A8A291] uppercase tracking-[0.2em]">没有更多可添加的企划</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 紧急焦点列表 */}
+          <div className="grid grid-cols-1 gap-2.5 px-1">
+            {priorityOrders.length > 0 ? (
+              priorityOrders.map((o) => {
+                const stage = getStageConfig(o);
+                return (
+                  <div 
+                    key={o.id} 
+                    data-order-id={o.id} /* Add data-order-id for touch drop target identification */
+                    className={`group relative`}
+                    draggable="true"
+                    onDragStart={(e) => handlePriorityDragStart(e, o.id)}
+                    onDragEnter={(e) => handlePriorityDragEnter(e, o.id)}
+                    onDragLeave={handlePriorityDragLeave}
+                    onDragEnd={handlePriorityDragEnd}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handlePriorityDrop(e, o.id)}
+                    onTouchStart={(e) => handlePriorityTouchStart(e, o.id)}
+                    onTouchEnd={handlePriorityTouchEnd}
+                    // onTouchMove for visual feedback is complex, omitted for minimal changes
+                  >
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); togglePriority(o.id); }}
+                      className="absolute top-2 right-2 z-10 w-6 h-6 bg-[#FDFBF7]/80 backdrop-blur-sm rounded-full flex items-center justify-center border border-[#E2E8E4] text-[#A8A291] hover:text-rose-500 hover:border-rose-100 transition-all opacity-0 group-hover:opacity-100"
+                      aria-label="从紧急列表中移除"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+
+                    <div onClick={() => onEditOrder(o)} className="bg-[#FDFBF7] p-3.5 rounded-[1.25rem] border border-[#E2E8E4]/60 card-baked-subtle-shadow hover:border-[#4B5E4F] transition-all cursor-pointer relative overflow-hidden active:scale-[0.98] flex items-center gap-3">
+                      {/* 拖拽手柄，在移动端始终可见，桌面端悬浮可见 */}
+                      <GripVertical className="w-5 h-5 text-slate-400 cursor-grab shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" aria-label="拖拽调整顺序" />
+                      {/* Original content of the card */}
+                      <div className="flex items-center gap-3 md:gap-4 flex-1">
+                        {/* 左侧：日期 */}
+                        <div className="flex flex-col items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl transition-all shadow-sm bg-[#F4F1EA] text-[#2C332D] shrink-0">
+                          <span className="text-[14px] md:text-lg font-black leading-none">{format(parseDateSafe(o.deadline)!, 'dd')}</span>
+                          <span className="text-[7px] md:text-[8px] font-bold uppercase mt-0.5 opacity-60">{format(parseDateSafe(o.deadline)!, 'MMM', { locale: zhCN })}</span>
+                        </div>
+
+                        {/* 中间：标题与进度 */}
+                        <div className="flex-1 min-w-0 pr-1">
+                          <h4 className="font-black text-[14px] md:text-lg tracking-tight truncate mb-2 text-[#2C332D]">{o.title}</h4>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner">
+                              <div 
+                                className="h-full transition-all duration-1000" 
+                                style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} 
+                              />
+                            </div>
+                            <span className="text-[8.5px] md:text-[10px] font-black uppercase tracking-[0.1em] text-[#4B5E4F]/70">
+                              {o.progressStage} · {stage.progress}%
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="col-span-full py-10 text-center bg-[#FDFBF7] border-2 border-dashed border-[#E2E8E4] rounded-[1.75rem] card-baked-shadow">
+                 <Cookie className="w-8 h-8 text-[#D6D2C4] mx-auto mb-2 opacity-30" />
+                 <p className="text-[9px] font-black text-[#A8A291] uppercase tracking-[0.2em]">点击 + 号，挑选今日重点烘焙项目</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 新增：最近到期区域 - 现在是右侧一列 */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2">
+               <div className="w-6 h-6 rounded-lg bg-[#F4F1EA] flex items-center justify-center">
+                 <Clock className="w-3 h-3 text-[#D4A373]" />
+               </div>
+               <h3 className="font-black text-[#2C332D] text-[10px] uppercase tracking-[0.2em] text-[#D4A373]">最近到期 | Upcoming Deadlines</h3>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5 px-1">
+            {upcomingOrders.length > 0 ? (
+              upcomingOrders.map(o => {
+                const stage = getStageConfig(o);
+                return (
+                  <div 
+                    key={o.id} 
+                    onClick={() => onEditOrder(o)} 
+                    className="bg-[#FDFBF7] p-3.5 rounded-[1.25rem] border border-[#D6D2C4]/40 card-baked-subtle-shadow hover:border-[#4B5E4F] transition-all cursor-pointer relative overflow-hidden active:scale-[0.98]">
+                    <div className="flex items-center gap-3 md:gap-4"> {/* Adjusted for OrderList-like layout */}
+                      {/* 左侧：日期 */}
+                      <div className="flex flex-col items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl transition-all shadow-sm bg-[#F4F1EA] text-[#2C332D] shrink-0">
+                        <span className="text-[14px] md:text-lg font-black leading-none">{format(parseDateSafe(o.deadline)!, 'dd')}</span>
+                        <span className="text-[7px] md:text-[8px] font-bold uppercase mt-0.5 opacity-60">{format(parseDateSafe(o.deadline)!, 'MMM', { locale: zhCN })}</span>
+                      </div>
+
+                      {/* 中间：标题与进度 */}
+                      <div className="flex-1 min-w-0 pr-1">
+                        <h4 className="font-black text-[14px] md:text-lg tracking-tight truncate mb-2 text-[#2C332D]">{o.title}</h4>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner">
+                            <div 
+                              className="h-full transition-all duration-1000" 
+                              style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} 
+                            />
+                          </div>
+                          <p className="text-[8.5px] md:text-[10px] font-black uppercase tracking-[0.1em] text-[#4B5E4F]/70">
+                            {o.progressStage} · {stage.progress}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="col-span-full py-10 text-center bg-[#FDFBF7] border-2 border-dashed border-[#E2E8E4] rounded-[1.75rem] card-baked-shadow">
+                 <Sprout className="w-8 h-8 text-[#D6D2C4] mx-auto mb-2 opacity-30" />
+                 <p className="text-[9px] font-black text-[#A8A291] uppercase tracking-[0.2em]">暂无近期到期企划</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

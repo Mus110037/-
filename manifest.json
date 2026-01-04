@@ -5,7 +5,7 @@
   "description": "插画师专属的抽象大饼管理系统",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F4F1EA",
+  "background_color": "#EAE4D7",
   "theme_color": "#4B5E4F",
   "icons": [
     {

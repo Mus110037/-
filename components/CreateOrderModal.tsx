@@ -105,7 +105,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
-      <div ref={modalRef} className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-500" onClick={e => e.stopPropagation()}>
+      <div ref={modalRef} className="bg-[#FDFBF7] w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-500" onClick={e => e.stopPropagation()}>
         <div className="px-6 md:px-10 py-6 md:py-8 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-900 tracking-tight uppercase">{initialOrder ? '编辑创作企划' : '开启新创作'}</h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full text-slate-300 transition-colors"><X className="w-5 h-5" /></button>
@@ -117,7 +117,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
               {/* 企划名称 */}
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2.5 flex items-center gap-2 tracking-widest">企划名称</label>
-                <input required className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-900 outline-none transition-all font-bold text-slate-900" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+                <input required className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-[#F4F1EA] focus:bg-white focus:border-slate-900 outline-none transition-all font-bold text-slate-900" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
               </div>
 
               {/* 稿酬金额 */}
@@ -125,7 +125,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                 <label className="text-[10px] font-bold text-[#3A5A40] uppercase mb-2.5 tracking-widest">稿酬金额 (CNY)</label>
                 <div className="relative">
                   <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A3B18A]" />
-                  <input required type="number" className="w-full pl-10 pr-5 py-3 rounded-xl border-2 border-[#D1D9D3] bg-[#F2F4F0] focus:bg-white focus:border-[#3A5A40] outline-none font-black text-slate-900 transition-all" value={formData.totalPrice} onChange={e => setFormData({ ...formData, totalPrice: e.target.value })} />
+                  <input required type="number" className="w-full pl-10 pr-5 py-3 rounded-xl border-2 border-[#D1D9D3] bg-[#F4F1EA] focus:bg-white focus:border-[#3A5A40] outline-none font-black text-slate-900 transition-all" value={formData.totalPrice} onChange={e => setFormData({ ...formData, totalPrice: e.target.value })} />
                 </div>
               </div>
 
@@ -143,8 +143,8 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                       onClick={() => setFormData({ ...formData, commissionType: type })}
                       className={`flex-1 py-2.5 rounded-xl border font-bold text-[10px] transition-all flex items-center justify-center gap-2 ${
                         formData.commissionType === type 
-                          ? 'bg-slate-900 border-slate-900 text-white shadow-md'
-                          : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                          ? (type === '商用' ? 'bg-rose-50 border-rose-200 text-rose-600 shadow-sm' : 'bg-lime-50 border-lime-200 text-lime-600 shadow-sm')
+                          : 'bg-[#FDFBF7] border-slate-200 text-slate-400 hover:border-slate-300'
                       }`}
                     >
                       {type === '商用' ? <Briefcase className="w-3 h-3" /> : <User className="w-3 h-3" />}
@@ -159,7 +159,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2.5 tracking-widest">艺术分类</label>
                 <div className="flex flex-wrap gap-2">
                   {settings.artTypes.map(t => (
-                    <button key={t} type="button" onClick={() => setFormData({ ...formData, artType: t })} className={`px-4 py-2 text-[10px] font-bold rounded-xl border transition-all ${formData.artType === t ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'}`}>{t}</button>
+                    <button key={t} type="button" onClick={() => setFormData({ ...formData, artType: t })} className={`px-4 py-2 text-[10px] font-bold rounded-xl border transition-all ${formData.artType === t ? 'bg-slate-900 text-white border-slate-900' : 'bg-[#FDFBF7] text-slate-500 border-slate-200'}`}>{t}</button>
                   ))}
                 </div>
               </div>
@@ -179,7 +179,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                       className={`flex-1 py-2.5 rounded-xl border font-bold text-[10px] transition-all ${
                         formData.priority === p 
                           ? (p === '高' ? 'bg-red-50 border-red-200 text-red-600 shadow-sm' : p === '中' ? 'bg-slate-900 border-slate-900 text-white shadow-md' : 'bg-slate-100 border-slate-200 text-slate-600')
-                          : 'bg-white border-slate-200 text-slate-400'
+                          : 'bg-[#FDFBF7] border-slate-200 text-slate-400'
                       }`}
                     >
                       {p}
@@ -194,7 +194,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2.5 tracking-widest">接稿渠道</label>
                 <div className="relative">
-                  <select className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-900 outline-none font-bold text-slate-900 appearance-none pr-10" value={formData.source} onChange={e => setFormData({ ...formData, source: e.target.value })}>
+                  <select className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-[#F4F1EA] focus:bg-white focus:border-slate-900 outline-none font-bold text-slate-900 appearance-none pr-10" value={formData.source} onChange={e => setFormData({ ...formData, source: e.target.value })}>
                     {settings.sources.map(s => <option key={s.name} value={s.name}>{s.name} (费率 {s.fee}%)</option>)}
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -216,7 +216,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                       className={`flex-1 py-2.5 rounded-xl border font-bold text-[10px] transition-all ${
                         formData.personCount === count 
                           ? 'bg-slate-900 border-slate-900 text-white shadow-md'
-                          : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                          : 'bg-[#FDFBF7] border-slate-200 text-slate-400 hover:border-slate-300'
                       }`}
                     >
                       {count}
@@ -233,7 +233,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                 </label>
                 <div className="relative">
                   <select 
-                    className="w-full px-5 py-4 rounded-2xl border-2 border-slate-900 bg-white focus:ring-4 focus:ring-slate-100 outline-none font-black text-slate-900 appearance-none pr-10 shadow-sm" 
+                    className="w-full px-5 py-4 rounded-2xl border-2 border-slate-900 bg-[#FDFBF7] focus:ring-4 focus:ring-slate-100 outline-none font-black text-slate-900 appearance-none pr-10 shadow-sm" 
                     value={formData.progressStage} 
                     onChange={e => setFormData({ ...formData, progressStage: e.target.value })}
                   >
@@ -259,7 +259,7 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
                       required 
                       type="number" 
                       step="0.5" 
-                      className="w-full px-5 py-3 rounded-xl border-2 border-[#3A5A40] bg-[#F2F4F0] focus:bg-white outline-none font-black text-[#2D3A30]" 
+                      className="w-full px-5 py-3 rounded-xl border-2 border-[#3A5A40] bg-[#F4F1EA] focus:bg-white outline-none font-black text-[#2D3A30]" 
                       placeholder="例如: 8.5"
                       value={formData.actualDuration} 
                       onChange={e => setFormData({ ...formData, actualDuration: e.target.value })} 
@@ -271,14 +271,14 @@ const CreateOrderModal: React.FC<CreateOrderModalProps> = ({ isOpen, onClose, on
               {/* 交付日期 */}
               <div>
                 <label className="text-[10px] font-bold text-slate-400 uppercase mb-2.5 tracking-widest">交付日期</label>
-                <input required type="date" className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-900 outline-none font-bold text-slate-900" value={formData.deadline} onChange={e => setFormData({ ...formData, deadline: e.target.value })} />
+                <input required type="date" className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-[#F4F1EA] focus:bg-white focus:border-slate-900 outline-none font-bold text-slate-900" value={formData.deadline} onChange={e => setFormData({ ...formData, deadline: e.target.value })} />
               </div>
 
               {/* 备注信息 */}
               {!isCompleted && (
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase mb-2.5 tracking-widest">备注信息</label>
-                  <textarea rows={3} className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-slate-900 outline-none font-medium text-slate-700 text-[11px] resize-none" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="输入额外要求..." />
+                  <textarea rows={3} className="w-full px-5 py-3 rounded-xl border border-slate-200 bg-[#F4F1EA] focus:bg-white focus:border-slate-900 outline-none font-medium text-slate-700 text-[11px] resize-none" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="输入额外要求..." />
                 </div>
               )}
             </div>

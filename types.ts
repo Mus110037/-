@@ -28,6 +28,7 @@ export interface AppSettings {
   sources: SourceConfig[];
   artTypes: string[];
   personCounts: string[];
+  showAiUI: boolean; // 新增：控制财务视图中时薪计算的显示
 }
 
 export interface Order {

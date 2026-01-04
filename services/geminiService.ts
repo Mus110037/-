@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Order, Resource } from "../types";
 
@@ -24,7 +25,7 @@ export const optimizeSchedule = async (orders: Order[], resources: Resource[]) =
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-pro-preview",
-      contents: prompt,
+      contents: [{ text: prompt }], // Corrected to use parts array
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -61,7 +62,7 @@ export const getSchedulingInsights = async (orders: Order[]) => {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: prompt,
+      contents: [{ text: prompt }], // Corrected to use parts array
       config: {
         systemInstruction: "你是一位简洁的工业顾问。每条见解请保持在 30 字以内。"
       }
@@ -69,6 +70,67 @@ export const getSchedulingInsights = async (orders: Order[]) => {
     return response.text || "暂时无法生成见解。";
   } catch (error) {
     return "暂时无法生成见解。";
+  }
+};
+
+/**
+ * 新增：获取财务见解
+ * @param orders 订单列表
+ * @returns 3-5 条关于财务状况的简洁见解
+ */
+export const getFinancialInsights = async (orders: Order[]) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  const prompt = `你是一位专业的财务分析师。分析以下订单数据，给出3-5条关于营收、工时利用率、高价值企划类型或潜在财务风险的简洁见解。
+  订单数据: ${JSON.stringify(orders)}`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview", // 适用于简洁文本任务
+      contents: [{ text: prompt }], // Corrected to use parts array
+      config: {
+        systemInstruction: "你是一位简洁的财务分析顾问。每条见解请保持在 30 字以内。"
+      }
+    });
+    return response.text || "暂时无法生成财务见解。";
+  } catch (error) {
+    console.error("Gemini 获取财务见解失败:", error);
+    return "暂时无法生成财务见解。";
+  }
+};
+
+/**
+ * 新增：获取完整的 AI 分析报告
+ * @param orders 订单列表
+ * @returns 包含调度、财务、瓶颈和建议的全面报告
+ */
+export const getFullAIAnalysis = async (orders: Order[]) => {
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  const prompt = `你是一位经验丰富的业务战略顾问。请根据以下所有订单数据，提供一份详细的综合分析报告。报告应包含以下几个方面：
+  1.  **项目组合概览:** 总结当前进行中、已完成、高优先级项目的数量和价值。
+  2.  **调度与瓶颈分析:** 识别潜在的排期冲突、即将到期的紧急项目，并给出建议以避免瓶颈。
+  3.  **财务健康分析:** 评估总预估收入、实际入账，分析收入来源结构，并识别高利润或高风险的企划类型。
+  4.  **工时利用率评估:** 分析已完成项目的实际工时数据，评估工作效率和资源分配。
+  5.  **战略性建议:** 基于以上分析，为优化业务运营、提升效率、增加收入和降低风险提供 3-5 条具体且可行的建议。
+  
+  订单数据: ${JSON.stringify(orders)}
+  
+  请以 Markdown 格式返回报告，使用清晰的标题和列表，确保报告内容专业且易于理解。报告长度应在 300-500 字之间。`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-pro-preview", // 适用于复杂推理和报告生成
+      contents: [{ text: prompt }], // Corrected to use parts array
+      config: {
+        maxOutputTokens: 1000, // 确保有足够输出空间
+        thinkingConfig: { thinkingBudget: 1000 }, // 允许模型进行更多思考
+      }
+    });
+    return response.text || "暂时无法生成完整的 AI 分析报告。";
+  } catch (error) {
+    console.error("Gemini 获取完整 AI 分析报告失败:", error);
+    return "暂时无法生成完整的 AI 分析报告。";
   }
 };
 

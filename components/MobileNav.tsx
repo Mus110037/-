@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Calendar, ListTodo, Wallet, Settings } from 'lucide-react';
+import { LayoutDashboard, Calendar, ListTodo, Wallet, Settings, Bot } from 'lucide-react'; // Import Bot icon
 
 interface MobileNavProps {
   activeTab: string;
@@ -13,6 +13,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeTab, setActiveTab }) => {
     { id: 'calendar', icon: Calendar, label: '日历' },
     { id: 'orders', icon: ListTodo, label: '企划' },
     { id: 'finance', icon: Wallet, label: '财务' },
+    // { id: 'ai-assistant', icon: Bot, label: 'AI' }, // Removed AI Assistant tab for mobile
     { id: 'settings', icon: Settings, label: '设置' },
   ];
 

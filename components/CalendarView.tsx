@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { format, endOfMonth, eachDayOfInterval, isSameDay, addMonths } from 'date-fns';
+import { format, endOfMonth, eachDayOfInterval, isSameDay, addMonths, parseISO, isSameMonth as dfIsSameMonth, isSameYear as dfIsSameYear } from 'date-fns'; // Added parseISO
 import { zhCN } from 'date-fns/locale/zh-CN';
 import { Order, AppSettings } from '../types';
 import { ChevronLeft, ChevronRight, Wallet, CheckCircle2, Clock } from 'lucide-react';
@@ -11,9 +11,12 @@ interface CalendarViewProps {
   settings: AppSettings;
 }
 
+// 定义用于日历上半月和下半月背景色的调色板
+const CALENDAR_HALF_MONTH_BG_PALETTE = ['#FDFBF7', '#F4F1EA'];
+
 const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settings }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  
+  const [currentDate, setCurrentMonth] = useState(new Date()); // Renamed for clarity to avoid confusion with `currentDate` in `App.tsx`
+
   const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const end = endOfMonth(currentDate);
   const days = eachDayOfInterval({ start, end });
@@ -27,7 +30,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
     return o.totalPrice * (1 - source.fee / 100);
   };
 
-  const currentMonthOrders = orders.filter(o => format(new Date(o.deadline.replace(/-/g, '/')), 'yyyy-MM') === format(currentDate, 'yyyy-MM'));
+  const currentMonthOrders = orders.filter(o => {
+    try {
+      // Use parseISO for YYYY-MM-DD format
+      const orderDate = parseISO(o.deadline);
+      return dfIsSameMonth(orderDate, currentDate);
+    } catch {
+      return false;
+    }
+  });
+  
   const monthProjected = currentMonthOrders.reduce((sum, o) => sum + calculateActual(o), 0);
   const monthActual = currentMonthOrders.filter(o => getStageConfig(o.progressStage).progress === 100).reduce((sum, o) => sum + calculateActual(o), 0);
   const monthTotalDuration = currentMonthOrders
@@ -35,61 +47,84 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
     .reduce((sum, o) => sum + (o.actualDuration || 0), 0);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700 pb-24">
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <div className="bg-[#FAFAF5] p-5 rounded-xl border border-[#D1D6D1] shadow-sm flex items-center gap-4">
-          <div className="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400 shrink-0"><Wallet className="w-4 h-4" /></div>
+    <div className="space-y-4 md:space-y-6 animate-in fade-in duration-700 pb-32 md:pb-24 px-1 md:px-4"> {/* Increased desktop padding */}
+      {/* 顶部 KPI：移动端 2 列，桌面端 3 列 */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 md:gap-4">
+        <div className="bg-[#FDFBF7] p-3 md:p-5 rounded-2xl border border-[#D1D6D1] shadow-sm flex items-center gap-3 md:gap-4">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-[#FDFBF7] rounded-xl flex items-center justify-center text-slate-400 shrink-0 border border-slate-100"><Wallet className="w-4 h-4" /></div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">月度预收</p>
-            <p className="text-lg font-black text-[#2D362E] truncate">¥{monthProjected.toLocaleString()}</p>
+            <p className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">月度预收</p>
+            <p className="text-sm md:text-2xl font-black text-[#2D362E] truncate tracking-tighter">¥{monthProjected.toLocaleString()}</p> {/* Increased desktop text size */}
           </div>
         </div>
-        <div className="bg-[#FAFAF5] p-5 rounded-xl border border-[#D1D6D1] shadow-sm flex items-center gap-4">
-          <div className="w-9 h-9 bg-[#2D3A30] rounded-lg flex items-center justify-center text-white shrink-0 shadow-md"><CheckCircle2 className="w-4 h-4" /></div>
+        <div className="bg-[#FDFBF7] p-3 md:p-5 rounded-2xl border border-[#D1D6D1] shadow-sm flex items-center gap-3 md:gap-4">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-[#4B5E4F] rounded-xl flex items-center justify-center text-white shrink-0 shadow-md"><CheckCircle2 className="w-4 h-4" /></div>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">已入账</p>
-            <p className="text-lg font-black text-[#2D362E] truncate">¥{monthActual.toLocaleString()}</p>
+            <p className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">已入账</p>
+            <p className="text-sm md:text-2xl font-black text-[#2D362E] truncate tracking-tighter">¥{monthActual.toLocaleString()}</p> {/* Increased desktop text size */}
           </div>
         </div>
-        <div className="bg-[#EDF1EE] p-5 rounded-xl border border-[#D1D6D1] shadow-sm flex items-center gap-4 col-span-2 lg:col-span-1">
-          <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-[#3A5A40] shrink-0 shadow-sm"><Clock className="w-4 h-4" /></div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold text-[#4F6D58] uppercase tracking-widest">工时</p>
-            <p className="text-lg font-black text-[#2D3A30] truncate">{monthTotalDuration.toFixed(1)}H</p>
+        <div className="bg-[#FDFBF7] p-3 md:p-5 rounded-2xl border border-[#D1D6D1] shadow-sm flex items-center gap-3 md:gap-4 col-span-2 lg:col-span-1">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-[#FDFBF7] rounded-xl flex items-center justify-center text-[#4B5E4F] shrink-0 border border-[#D1D9D3]"><Clock className="w-4 h-4" /></div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[7px] md:text-[9px] font-black text-[#4B5E4F]/60 uppercase tracking-widest">累计烘焙工时</p>
+            <p className="text-sm md:text-2xl font-black text-[#2D3A30] truncate tracking-tighter">{monthTotalDuration.toFixed(1)}H</p> {/* Increased desktop text size */}
           </div>
         </div>
       </div>
 
-      <div className="bg-[#FAFAF5] rounded-xl shadow-sm border border-[#D1D6D1] overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-100 flex flex-wrap justify-between items-center bg-white gap-4">
-          <div className="flex items-center gap-4">
-            <h2 className="text-lg font-black text-[#1B241D] tracking-tight">{format(currentDate, 'yyyy MMMM', { locale: zhCN })}</h2>
-            <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-lg border border-slate-200">
-              <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-white rounded-md transition-all text-slate-400 hover:text-slate-900"><ChevronLeft className="w-4 h-4" /></button>
-              <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-1 hover:bg-white rounded-md transition-all text-slate-400 hover:text-slate-900"><ChevronRight className="w-4 h-4" /></button>
+      {/* 日历主体 */}
+      <div className="bg-[#FDFBF7] rounded-[2rem] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-[#D1D6D1] overflow-hidden">
+        {/* 日历头部：更紧凑的移动端布局 */}
+        <div className="px-5 py-4 border-b border-slate-50 flex justify-between items-center bg-[#FDFBF7]">
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col">
+              <h2 className="text-sm md:text-lg font-black text-[#1B241D] tracking-tight leading-none">{format(currentDate, 'yyyy MMMM', { locale: zhCN })}</h2>
+              <span className="text-[7px] font-bold text-[#A8A291] uppercase tracking-[0.2em] mt-1 hidden md:block">Baking Calendar</span>
+            </div>
+            <div className="flex items-center gap-1 bg-[#F4F1EA]/50 p-1 rounded-xl border border-[#D6D2C4]/30">
+              <button onClick={() => setCurrentMonth(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-1.5 hover:bg-[#FDFBF7] rounded-lg transition-all text-[#A8A291] hover:text-[#4B5E4F]"><ChevronLeft className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setCurrentMonth(addMonths(currentDate, 1))} className="p-1.5 hover:bg-[#FDFBF7] rounded-lg transition-all text-[#A8A291] hover:text-[#4B5E4F]"><ChevronRight className="w-3.5 h-3.5" /></button>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setCurrentDate(new Date())} className="text-xs font-black text-white px-5 py-3 bg-[#2D3A30] rounded-xl hover:bg-slate-800 transition-all shadow-sm">今日</button>
-          </div>
+          <button onClick={() => setCurrentMonth(new Date())} className="text-[9px] font-black text-[#4B5E4F] px-4 py-2 bg-[#F4F1EA] rounded-xl hover:bg-[#D6D2C4]/20 transition-all border border-[#D6D2C4]/40 uppercase tracking-widest">Today</button>
         </div>
         
-        <div className="grid grid-cols-7 gap-px bg-slate-200">
-          {['一', '二', '三', '四', '五', '六', '日'].map(day => (
-            <div key={day} className="bg-white py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">{day}</div>
+        {/* 星期表头：移动端缩短 */}
+        <div className="grid grid-cols-7 gap-px bg-slate-100/50">
+          {['一', '二', '三', '四', '五', '六', '日'].map((day, idx) => (
+            <div key={day} className={`bg-[#FDFBF7] py-3 text-center text-[9px] font-black tracking-widest ${idx >= 5 ? 'text-[#D4A373]' : 'text-[#A8A291]'}`}>{day}</div>
           ))}
+          
+          {/* 日期单元格 */}
           {days.map((day, i) => {
-            const dayOrders = orders.filter(o => isSameDay(new Date(o.deadline.replace(/-/g, '/')), day));
+            const dayOrders = orders.filter(o => {
+              try {
+                // Use parseISO for YYYY-MM-DD format
+                return isSameDay(parseISO(o.deadline), day);
+              } catch {
+                return false;
+              }
+            });
             const isToday = isSameDay(day, new Date());
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            const isFirstHalf = day.getDate() <= 15;
+
             return (
-              <div key={i} className={`bg-white min-h-[90px] md:min-h-[140px] p-1.5 md:p-2 transition-colors border-b border-r border-slate-100 relative ${isToday ? 'bg-[#FAFAF7]' : ''}`}>
-                <div className="flex justify-start mb-2">
-                   <span className={`text-[11px] font-black w-7 h-7 flex items-center justify-center rounded-lg shadow-sm ${isToday ? 'bg-[#2D3A30] text-white ring-4 ring-[#A3B18A]/30' : 'text-slate-400 bg-slate-50 border border-slate-100'}`}>
+              <div 
+                key={i} 
+                className={`min-h-[75px] md:min-h-[140px] p-1 md:p-2 transition-colors border-b border-r border-slate-50 relative group ${isToday ? 'bg-[#FDFBF7]' : CALENDAR_HALF_MONTH_BG_PALETTE[isFirstHalf ? 0 : 1]} ${isWeekend ? 'bg-[#FAFAF9]/30' : ''}`}
+              >
+                {/* 日期数字 */}
+                <div className="flex justify-start mb-1.5 md:mb-2">
+                   <span className={`text-[11px] md:text-lg font-black w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-lg transition-all ${isToday ? 'bg-[#4B5E4F] text-white shadow-[0_4px_10px_-2px_rgba(75,94,79,0.4)]' : 'text-[#A8A291] group-hover:text-[#4B5E4F]'}`}> {/* Increased date number size */}
                     {format(day, 'd')}
                   </span>
                 </div>
-                <div className="flex flex-col items-start gap-1">
-                  {dayOrders.slice(0, 4).map(order => {
+
+                {/* 饼干（企划条）容器 */}
+                <div className="flex flex-col gap-0.5 md:gap-1">
+                  {dayOrders.slice(0, 3).map(order => {
                     const stage = getStageConfig(order.progressStage);
                     const isHigh = order.priority === '高';
                     const isFinished = stage.progress === 100;
@@ -98,37 +133,48 @@ const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settin
                       <div 
                         key={order.id} 
                         onClick={() => onEditOrder(order)} 
-                        className={`w-full relative h-5 md:h-6 rounded md:rounded-lg overflow-hidden border transition-all mb-0.5 group flex items-center px-1.5 shadow-sm bg-[#E8E6DF] ${isHigh ? 'ring-1 ring-amber-400/30' : ''}`}
-                        style={{ 
-                          borderColor: 'rgba(0,0,0,0.05)'
-                        }}
+                        className={`w-full relative h-3.5 md:h-6 rounded-md overflow-hidden transition-all cursor-pointer flex items-center px-1 shadow-sm 
+                        ${isHigh && !isFinished ? 'bg-[#FEECEB] border-2 border-[#E07A5F] ring-2 ring-[#E07A5F]/60 shadow-md font-bold' : 'bg-[#F4F1EA] border border-[#D6D2C4]/40'}
+                        hover:scale-[1.02] active:scale-95`}
                       >
                         {/* 进度条填充 */}
                         <div 
-                          className="absolute inset-y-0 left-0 transition-all duration-700 ease-out"
-                          style={{ 
-                            width: `${stage.progress}%`, 
-                            backgroundColor: stage.color 
-                          }} 
+                          className="absolute inset-0 rounded-md transition-all duration-500" 
+                          style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} 
                         />
-                        
-                        {/* 文字内容 - 确保 z-index 在进度条之上 */}
+
+                        {/* 标题：由于背景色统一，文字颜色成为了唯一的区分度 */}
                         <div className="relative z-10 w-full flex items-center gap-1 overflow-hidden pointer-events-none">
-                          <span className={`text-[8px] md:text-[10px] font-black truncate leading-none transition-colors ${isFinished ? 'text-white' : 'text-[#2D3A30]'}`}>
+                          <span className={`text-[8px] md:text-[11px] font-black truncate leading-none ${isFinished ? 'text-[#A8A291] line-through opacity-60' : 'text-[#2D3A30]'}`}> {/* Increased title size */}
                             {order.title}
                           </span>
                         </div>
                         
-                        {isHigh && <div className="absolute top-1 right-1 w-1 h-1 bg-red-500 rounded-full animate-pulse z-20" />}
+                        {isHigh && !isFinished && <div className="absolute top-0 right-0 w-1 h-1 bg-[#E07A5F] rounded-bl-sm z-20" />}
                       </div>
                     );
                   })}
-                  {dayOrders.length > 4 && <div className="text-[8px] font-black text-slate-300 ml-1.5 font-sans tracking-tighter">+{dayOrders.length - 4} items</div>}
+                  
+                  {/* 更多指示器 */}
+                  {dayOrders.length > 3 && (
+                    <div className="flex justify-center md:justify-start">
+                      <div className="text-[7px] md:text-[9px] font-black text-[#D4A373] bg-[#D4A373]/10 px-1 rounded-sm tracking-tighter"> {/* Increased more indicator size */}
+                        +{dayOrders.length - 3}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
+      </div>
+
+      {/* 底部备注 */}
+      <div className="text-center md:text-left px-4">
+        <p className="text-[7.5px] md:text-[9px] font-bold text-[#A8A291] uppercase tracking-[0.2em] leading-relaxed">
+          * 日历视图仅展示近期企划概览 · 点击日期单元格查看详情
+        </p>
       </div>
     </div>
   );

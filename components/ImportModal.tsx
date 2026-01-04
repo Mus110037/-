@@ -221,8 +221,8 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-[#1B241D]/60 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}>
-      <div className={`bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden transition-all duration-300 ${isDragging ? 'scale-105 border-4 border-dashed border-[#3A5A40]' : ''}`} onClick={e => e.stopPropagation()}>
-        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-white">
+      <div className={`bg-[#FDFBF7] w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden transition-all duration-300 ${isDragging ? 'scale-105 border-4 border-dashed border-[#3A5A40]' : ''}`} onClick={e => e.stopPropagation()}>
+        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-[#FDFBF7]">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-[#3A5A40] text-white rounded-2xl shadow-lg"><Wand2 className="w-5 h-5" /></div>
             <div>
@@ -236,16 +236,16 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
         <div className="p-8 space-y-8">
           {(!preview && parsedData.length === 0 && !loading && !errorMsg) ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div onClick={() => fileInputRef.current?.click()} className="aspect-square border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-4 hover:border-[#3A5A40] hover:bg-[#F2F4F0] transition-all cursor-pointer group">
-                <div className="p-4 bg-white shadow-md rounded-2xl group-hover:bg-[#3A5A40] group-hover:text-white transition-all"><Camera className="w-8 h-8" /></div>
+              <div onClick={() => fileInputRef.current?.click()} className="aspect-square border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-4 hover:border-[#3A5A40] hover:bg-[#F4F1EA] transition-all cursor-pointer group">
+                <div className="p-4 bg-[#FDFBF7] shadow-md rounded-2xl group-hover:bg-[#3A5A40] group-hover:text-white transition-all"><Camera className="w-8 h-8" /></div>
                 <div className="text-center px-4">
                   <p className="text-xs font-bold text-[#2D3A30]">截图识别</p>
                   <p className="text-[9px] text-slate-400 mt-1">粘贴或拖拽后台截图</p>
                 </div>
                 <input type="file" ref={fileInputRef} onChange={e => e.target.files?.[0] && processFile(e.target.files[0])} className="hidden" accept="image/*" />
               </div>
-              <div onClick={() => excelInputRef.current?.click()} className="aspect-square border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-4 hover:border-[#3A5A40] hover:bg-[#F2F4F0] transition-all cursor-pointer group">
-                <div className="p-4 bg-white shadow-md rounded-2xl group-hover:bg-[#3A5A40] group-hover:text-white transition-all text-[#3A5A40]"><FileSpreadsheet className="w-8 h-8" /></div>
+              <div onClick={() => excelInputRef.current?.click()} className="aspect-square border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-4 hover:border-[#3A5A40] hover:bg-[#F4F1EA] transition-all cursor-pointer group">
+                <div className="p-4 bg-[#FDFBF7] shadow-md rounded-2xl group-hover:bg-[#3A5A40] group-hover:text-white transition-all text-[#3A5A40]"><FileSpreadsheet className="w-8 h-8" /></div>
                 <div className="text-center px-4">
                   <p className="text-xs font-bold text-[#2D3A30]">Excel/CSV 导入</p>
                   <p className="text-[9px] text-slate-400 mt-1">智能匹配并合并同步</p>
@@ -276,14 +276,14 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
                     <>
                       <div className="flex items-center justify-between px-2">
                         <h4 className="text-[10px] font-black text-[#4F6D58] uppercase tracking-[0.2em]">待载入项 ({parsedData.length})</h4>
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-[#EDF1EE] rounded-lg border border-[#D1D9D3] shadow-sm animate-pulse">
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-[#F4F1EA] rounded-lg border border-[#D1D9D3] shadow-sm animate-pulse">
                            <RefreshCw className="w-3 h-3 text-[#3A5A40]" />
                            <span className="text-[8px] text-[#3A5A40] font-black">智能合并模式已开启</span>
                         </div>
                       </div>
                       <div className="max-h-64 overflow-y-auto custom-scrollbar space-y-2 pr-2">
                         {parsedData.map((item, i) => (
-                          <div key={i} className="flex items-center gap-4 p-4 bg-[#F2F4F0] rounded-2xl border border-transparent hover:border-[#3A5A40] transition-all">
+                          <div key={i} className="flex items-center gap-4 p-4 bg-[#F4F1EA] rounded-2xl border border-transparent hover:border-[#3A5A40] transition-all">
                             <div className="flex-1 min-w-0">
                               <p className="text-[12px] font-black text-[#2D3A30] truncate">{item.title}</p>
                               <p className="text-[8px] text-[#4F6D58] font-bold mt-1 uppercase">截止: {item.deadline} · {item.progressStage}</p>
@@ -299,12 +299,12 @@ const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onImport }) 
                     </>
                   ) : (
                     <div className="p-8 text-center space-y-6 animate-in zoom-in duration-300">
-                      <div className="w-20 h-20 bg-[#F2F4F0] rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-[#D1D9D3] shadow-inner">
+                      <div className="w-20 h-20 bg-[#F4F1EA] rounded-full flex items-center justify-center mx-auto mb-2 border-2 border-[#D1D9D3] shadow-inner">
                         <RefreshCw className="w-10 h-10 text-[#3A5A40]" />
                       </div>
                       <div>
                         <h4 className="text-lg font-bold text-slate-900">智能合并同步确认</h4>
-                        <div className="bg-[#EDF1EE] p-5 rounded-[1.5rem] mt-4 border border-[#D1D9D3] text-left">
+                        <div className="bg-[#F4F1EA] p-5 rounded-[1.5rem] mt-4 border border-[#D1D9D3] text-left">
                            <ul className="text-[10px] text-[#4F6D58] font-bold space-y-3">
                               <li className="flex gap-2 items-start"><CheckCircle2 className="w-3.5 h-3.5 text-[#3A5A40] shrink-0" /> 系统将通过企划名称+截稿日期识别重复项并更新。</li>
                               <li className="flex gap-2 items-start"><CheckCircle2 className="w-3.5 h-3.5 text-[#3A5A40] shrink-0" /> 新企划将自动追加到列表末尾。</li>
