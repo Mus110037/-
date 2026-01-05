@@ -22,10 +22,12 @@ const ONBOARDING_KEY = 'artnexus_onboarding_done';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  
   const [orders, setOrders] = useState<Order[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : SAMPLE_ORDERS;
   });
+
   const [settings, setSettings] = useState<AppSettings>(() => {
     const saved = localStorage.getItem(SETTINGS_KEY);
     const defaultSettings: AppSettings = { 
@@ -33,9 +35,13 @@ const App: React.FC = () => {
       sources: DEFAULT_SOURCES,
       artTypes: DEFAULT_ART_TYPES,
       personCounts: DEFAULT_PERSON_COUNTS,
-      showAiUI: true, // New: Default to true
+      showAiUI: true,
     };
-    return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+    try {
+      return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+    } catch (e) {
+      return defaultSettings;
+    }
   });
   
   const [priorityOrderIds, setPriorityOrderIds] = useState<string[]>(() => {
@@ -43,17 +49,15 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // 精细化 AI 见解状态
   const [schedulingInsights, setSchedulingInsights] = useState<string>("");
   const [financeInsights, setFinanceInsights] = useState<string>("");
-  const [orderListInsights, setOrderListInsights] = useState<string>(""); // New state for OrderList insights
+  const [orderListInsights, setOrderListInsights] = useState<string>("");
   const [fullAiAnalysis, setFullAiAnalysis] = useState<string>("");
 
-  // 精细化 AI 加载状态
   const [isSchedulingAiLoading, setIsSchedulingAiLoading] = useState(false);
   const [isFinanceAiLoading, setIsFinanceAiLoading] = useState(false);
-  const [isOrderListAiLoading, setIsOrderListAiLoading] = useState(false); // New state for OrderList AI loading
-  const [isFullAiLoading, setIsFullAiLoading] = useState(false); // Only for AI Assistant tab's full report
+  const [isOrderListAiLoading, setIsOrderListAiLoading] = useState(false);
+  const [isFullAiLoading, setIsFullAiLoading] = useState(false);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
@@ -61,6 +65,7 @@ const App: React.FC = () => {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [showGuide, setShowGuide] = useState(() => !localStorage.getItem(ONBOARDING_KEY));
 
+  // 统一持久化逻辑
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
   }, [orders]);
@@ -73,23 +78,12 @@ const App: React.FC = () => {
     localStorage.setItem(PRIORITY_IDS_KEY, JSON.stringify(priorityOrderIds));
   }, [priorityOrderIds]);
 
-  // Effect for dynamic AI insights based on active tab and showAiUI setting
   useEffect(() => {
     const loadInsights = async () => {
-      // Clear previous insights if AI is disabled
-      if (!settings.showAiUI) {
+      if (!settings.showAiUI || orders.length === 0) {
         setSchedulingInsights("");
         setFinanceInsights("");
         setOrderListInsights("");
-        setFullAiAnalysis(""); // Clear full analysis too
-        return;
-      }
-
-      if (orders.length === 0) {
-        setSchedulingInsights("面粉还没准备好，快去加单吧。");
-        setFinanceInsights("没有数据，无法分析财务状况。");
-        setOrderListInsights("没有数据，无法分析企划列表。");
-        // Full AI analysis is triggered manually, so no default "no data" message here.
         return;
       }
       
@@ -99,7 +93,6 @@ const App: React.FC = () => {
           const text = await getSchedulingInsights(orders);
           setSchedulingInsights(text);
         } catch (error) {
-          console.error("Failed to load scheduling insights:", error);
           setSchedulingInsights("暂时无法生成见解。");
         } finally {
           setIsSchedulingAiLoading(false);
@@ -110,26 +103,24 @@ const App: React.FC = () => {
           const text = await getFinancialInsights(orders);
           setFinanceInsights(text);
         } catch (error) {
-          console.error("Failed to load financial insights:", error);
           setFinanceInsights("暂时无法生成财务见解。");
         } finally {
           setIsFinanceAiLoading(false);
         }
-      } else if (activeTab === 'orders') { // Load insights for OrderList
+      } else if (activeTab === 'orders') {
         setIsOrderListAiLoading(true);
         try {
-          const text = await getSchedulingInsights(orders); // Reusing getSchedulingInsights
+          const text = await getSchedulingInsights(orders);
           setOrderListInsights(text);
         } catch (error) {
-          console.error("Failed to load order list insights:", error);
-          setOrderListInsights("暂时无法生成企划列表见解。");
+          setOrderListInsights("暂时无法生成见解。");
         } finally {
           setIsOrderListAiLoading(false);
         }
       }
     };
     loadInsights();
-  }, [orders, activeTab, settings.showAiUI]); // Re-run when orders, activeTab, or showAiUI changes
+  }, [orders, activeTab, settings.showAiUI]);
 
   const handleDismissGuide = () => {
     setShowGuide(false);
@@ -137,49 +128,52 @@ const App: React.FC = () => {
   };
 
   const handleUpdateSettings = (newSettings: AppSettings) => {
-    const updatedOrders = orders.map(order => {
-      let updatedOrder = { ...order };
-      let hasChanged = false;
+    setSettings(newSettings);
+    // 同时也需要处理已有企划的阶段名称映射（如果名称改了）
+    setOrders(prev => prev.map(order => {
       const oldStageIdx = settings.stages.findIndex(s => s.name === order.progressStage);
       if (oldStageIdx !== -1 && newSettings.stages[oldStageIdx]) {
         const newStageName = newSettings.stages[oldStageIdx].name;
         if (newStageName !== order.progressStage) {
-          updatedOrder.progressStage = newStageName;
-          hasChanged = true;
+          return { ...order, progressStage: newStageName };
         }
       }
-      return hasChanged ? updatedOrder : order;
-    });
-    setOrders(updatedOrders);
-    setSettings(newSettings);
+      return order;
+    }));
   };
 
   const handleSaveOrder = (newOrder: Order) => {
-    const orderWithVersion = { ...newOrder, updatedAt: new Date().toISOString(), version: (newOrder.version || 0) + 1 };
-    const orderExists = orders.some(o => o.id === newOrder.id);
-    
-    if (orderExists) {
-      setOrders(orders.map(o => o.id === newOrder.id ? orderWithVersion : o));
-    } else {
-      setOrders([...orders, { ...orderWithVersion, createdAt: new Date().toISOString().split('T')[0] }]);
-      if (showGuide) handleDismissGuide();
-    }
+    setOrders(prev => {
+      const orderWithVersion = { ...newOrder, updatedAt: new Date().toISOString(), version: (newOrder.version || 0) + 1 };
+      const exists = prev.some(o => o.id === newOrder.id);
+      if (exists) {
+        return prev.map(o => o.id === newOrder.id ? orderWithVersion : o);
+      } else {
+        return [...prev, { ...orderWithVersion, createdAt: new Date().toISOString().split('T')[0] }];
+      }
+    });
     setEditingOrder(null);
+    if (showGuide) handleDismissGuide();
   };
 
+  // 修复删除逻辑：使用函数式更新
   const handleDeleteOrder = (id: string) => {
-    setOrders(orders.filter(o => o.id !== id));
-    setPriorityOrderIds(priorityOrderIds.filter(pid => pid !== id));
+    setOrders(prev => prev.filter(o => o.id !== id));
+    setPriorityOrderIds(prev => prev.filter(pid => pid !== id));
   };
 
   const handleImportOrders = (newOrders: Order[], mode: 'append' | 'merge' | 'replace' = 'merge') => {
     if (mode === 'replace') {
-      setOrders(newOrders);
+      setOrders([...newOrders]);
       setPriorityOrderIds([]);
     } else {
-      setOrders([...orders, ...newOrders]);
+      setOrders(prev => [...prev, ...newOrders]);
     }
     if (showGuide) handleDismissGuide();
+  };
+
+  const handleImportSettings = (importedSettings: AppSettings) => {
+    setSettings({ ...importedSettings });
   };
 
   const handleStartEdit = (order: Order) => {
@@ -188,17 +182,13 @@ const App: React.FC = () => {
   };
 
   const handleGenerateFullAiAnalysis = useCallback(async () => {
-    if (orders.length === 0) {
-      setFullAiAnalysis("没有数据，无法生成完整报告。");
-      return;
-    }
-    setIsFullAiLoading(true); // Use specific loading state for full AI analysis
+    if (orders.length === 0) return;
+    setIsFullAiLoading(true);
     try {
       const analysis = await getFullAIAnalysis(orders);
-      setFullAiAnalysis(marked.parse(analysis)); // Parse markdown to HTML
+      setFullAiAnalysis(marked.parse(analysis));
     } catch (error) {
-      console.error("Failed to generate full AI analysis:", error);
-      setFullAiAnalysis("生成完整 AI 分析报告失败。请检查网络或重试。");
+      setFullAiAnalysis("生成报告失败，请重试。");
     } finally {
       setIsFullAiLoading(false);
     }
@@ -297,7 +287,7 @@ const App: React.FC = () => {
       </main>
 
       <CreateOrderModal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setEditingOrder(null); }} onSave={handleSaveOrder} onDelete={handleDeleteOrder} initialOrder={editingOrder} settings={settings} />
-      <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} onImportOrders={handleImportOrders} />
+      <SyncModal isOpen={isSyncModalOpen} onClose={() => setIsSyncModalOpen(false)} orders={orders} settings={settings} onImportOrders={handleImportOrders} onImportSettings={handleImportSettings} />
       <ImportModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} onImport={(newOnes) => handleImportOrders(newOnes, 'merge')} />
     </div>
   );

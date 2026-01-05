@@ -12,7 +12,7 @@ interface CalendarViewProps {
 }
 
 // 定义用于日历上半月和下半月背景色的调色板
-const CALENDAR_HALF_MONTH_BG_PALETTE = ['#FDFBF7', '#F4F1EA'];
+const CALENDAR_HALF_MONTH_BG_PALETTE = ['#FDFBF7', '#F9F9F4']; // #F9F9F4 比 #F4F1EA 更亮
 
 const CalendarView: React.FC<CalendarViewProps> = ({ orders, onEditOrder, settings }) => {
   const [currentDate, setCurrentMonth] = useState(new Date()); // Renamed for clarity to avoid confusion with `currentDate` in `App.tsx`

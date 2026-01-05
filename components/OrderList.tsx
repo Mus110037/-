@@ -29,8 +29,8 @@ const TAG_COLOR_PALETTE = [
 
 // 用于企划卡片背景的循环颜色，增加明度差异
 const GROUP_BG_PALETTE = [
-  '#FDFBF7', // 纯白色
-  '#F4F1EA', // 略深的米白色，与纯白色形成明显差异，并与背景和谐
+  '#FDFBF7', // 纯白色 (上半月)
+  '#F9F9F4', // 略微暖白，但比F4F1EA更亮 (下半月)
 ];
 
 
@@ -84,7 +84,12 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
     link.href = window.URL.createObjectURL(blob);
     link.setAttribute('download', `${order.title}_截稿日.ics`);
     document.body.appendChild(link);
-    document.body.removeChild(link);
+    link.click(); // Explicitly trigger the click event
+    // Wait a bit before revoking the URL and removing the link
+    setTimeout(() => {
+      window.URL.revokeObjectURL(link.href);
+      document.body.removeChild(link);
+    }, 100); // 100ms should be sufficient
   };
 
   const getGroupedOrders = useCallback((ordersToGroup: Order[]) => {
@@ -232,7 +237,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
           
           <div 
             id="pending-orders-section"
-            className={`grid grid-cols-1 gap-1.5 px-3 md:px-8 overflow-hidden transition-all duration-300 ease-in-out ${isPendingSectionExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
+            className={`grid grid-cols-1 gap-1.5 px-3 md:px-8 overflow-hidden transition-all duration-300 ease-in-out ${isPendingSectionExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}
             style={{ transitionProperty: 'max-height, opacity' }}
           >
             {pendingGroups.map((group, groupIdx) => (
@@ -290,7 +295,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
                             </div>
 
                             <div className="flex items-center gap-1.5 mb-1.5">
-                              <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner">
+                              <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner"> {/* Progress bar height h-1 */}
                                 <div 
                                   className="h-full transition-all duration-1000" 
                                   style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} 
@@ -367,7 +372,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
           </button>
           <div 
             id="completed-orders-section"
-            className={`grid grid-cols-1 gap-1.5 px-3 md:px-8 overflow-hidden transition-all duration-300 ease-in-out ${isCompletedSectionExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}
+            className={`grid grid-cols-1 gap-1.5 px-3 md:px-8 overflow-hidden transition-all duration-300 ease-in-out ${isCompletedSectionExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}
             style={{ transitionProperty: 'max-height, opacity' }}
           >
             {completedGroups.map((group, groupIdx) => (
@@ -425,7 +430,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
                             </div>
 
                             <div className="flex items-center gap-1.5 mb-1.5">
-                              <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner">
+                              <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner"> {/* Progress bar height h-1 */}
                                 <div 
                                   className="h-full transition-all duration-1000" 
                                   style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} 

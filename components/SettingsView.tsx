@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { AppSettings, StageConfig, SourceConfig } from '../types';
-import { Plus, Trash2, Save, RotateCcw, LayoutGrid, Tag, Users, Brush, Percent, Check, DollarSign, Wallet, BrainCircuit, Sparkles, Loader2, GripVertical } from 'lucide-react'; // Added GripVertical
+import { Plus, Trash2, Save, RotateCcw, LayoutGrid, Tag, Users, Brush, Percent, Check, DollarSign, Wallet, BrainCircuit, Sparkles, Loader2, ChevronUp, ChevronDown } from 'lucide-react'; // Changed GripVertical to ChevronUp, ChevronDown
 
 interface SettingsViewProps {
   settings: AppSettings;
@@ -19,14 +19,15 @@ interface SettingsViewProps {
  * 3. 进度逻辑：从高亮浅色（起步）向稳重深色（完成）演进
  */
 const PRESET_COLORS = [
-  '#FFF9C4', // 经典浅黄 (构思/草稿)
-  '#FFECB3', // 暖橙色 (布局/动态)
-  '#FCE4EC', // 樱花粉 (线稿/色稿)
-  '#F3E5F5', // 丁香紫 (底色/铺色)
-  '#E3F2FD', // 晴空蓝 (刻画/光影)
-  '#E8F5E9', // 薄荷绿 (细化/调整)
-  '#A3B18A', // 鼠尾草绿 (收尾阶段)
-  '#4B5E4F'  // 品牌深绿 (完全达成)
+  '#FFEB3B', // Vibrant Yellow (待开始)
+  '#8BC34A', // Lime Green (草稿阶段)
+  '#03A9F4', // Light Blue (线稿阶段)
+  '#FF7043', // Vivid Orange (铺色阶段)
+  '#BA68C8', // Light Purple (细化阶段)
+  '#EC407A', // Pinkish Red (后期调整)
+  '#26A69A', // Teal (新增，提供更多选择)
+  '#FFCA28', // Amber (新增，提供更多选择)
+  '#D4A373'  // Baked Orange (已成稿)
 ];
 
 const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, fullAiAnalysis, isFullAiLoading, onGenerateFullAiAnalysis, ordersLength }) => {
@@ -34,18 +35,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, full
   const [editingArtTypeIndex, setEditingArtTypeIndex] = useState<number | null>(null);
   const [tempArtTypeName, setTempArtTypeName] = useState<string>('');
 
-  // Drag and Drop Refs
-  const draggedStageItem = useRef<number | null>(null);
-  const draggedSourceItem = useRef<number | null>(null);
-  const draggedArtTypeItem = useRef<number | null>(null);
-  const isTouchDragging = useRef(false); // Track if a touch drag is active
-
   const handleSave = () => {
     setSettings(localSettings);
     alert('设置已成功同步。');
   };
 
-  const removeItem = (key: 'artTypes' | 'personCounts', index: number) => {
+  const removeItem = (key: 'artTypes' | 'personCounts' | 'stages' | 'sources', index: number) => { // Added stages and sources
     setLocalSettings({ ...localSettings, [key]: localSettings[key].filter((_, i) => i !== index) });
   };
 
@@ -64,112 +59,24 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, full
     setTempArtTypeName('');
   };
 
-  // Generic Drag & Drop Handlers (Mouse)
-  const handleDragStart = (e: React.DragEvent, index: number, type: 'stages' | 'sources' | 'artTypes') => {
-    if (isTouchDragging.current) return; // Prevent mouse drag if touch drag is active
-    e.dataTransfer.effectAllowed = "move";
-    if (type === 'stages') draggedStageItem.current = index;
-    else if (type === 'sources') draggedSourceItem.current = index;
-    else if (type === 'artTypes') draggedArtTypeItem.current = index;
-    e.currentTarget.classList.add('drag-active');
-  };
-
-  const handleDragEnter = (e: React.DragEvent, index: number, type: 'stages' | 'sources' | 'artTypes') => {
-    e.preventDefault();
-    let currentDraggedItem: number | null = null;
-    if (type === 'stages') currentDraggedItem = draggedStageItem.current;
-    else if (type === 'sources') currentDraggedItem = draggedSourceItem.current;
-    else if (type === 'artTypes') currentDraggedItem = draggedArtTypeItem.current;
-
-    if (currentDraggedItem !== null && currentDraggedItem !== index) {
-      e.currentTarget.classList.add('drag-over-target');
-    }
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-over-target');
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-active');
-    document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target')); // Clear all targets
-    draggedStageItem.current = null;
-    draggedSourceItem.current = null;
-    draggedArtTypeItem.current = null;
-  };
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number, type: 'stages' | 'sources' | 'artTypes') => {
-    e.preventDefault();
-    let currentDraggedItem: number | null = null;
-    if (type === 'stages') currentDraggedItem = draggedStageItem.current;
-    else if (type === 'sources') currentDraggedItem = draggedSourceItem.current;
-    else if (type === 'artTypes') currentDraggedItem = draggedArtTypeItem.current;
-
-    if (currentDraggedItem === null || currentDraggedItem === dropIndex) {
-      e.currentTarget.classList.remove('drag-over-target');
-      return;
-    }
-
+  // --- New: Move Up/Down Handlers for Settings Lists ---
+  const handleMoveItem = (idx: number, direction: 'up' | 'down', type: 'stages' | 'sources' | 'artTypes') => {
     const items = [...(localSettings as any)[type]];
-    const [draggedContent] = items.splice(currentDraggedItem, 1);
-    items.splice(dropIndex, 0, draggedContent);
+    if (idx === -1) return;
+
+    let newIndex = idx;
+    if (direction === 'up' && idx > 0) {
+      newIndex = idx - 1;
+    } else if (direction === 'down' && idx < items.length - 1) {
+      newIndex = idx + 1;
+    } else {
+      return; // Cannot move further
+    }
+
+    const [movedItem] = items.splice(idx, 1);
+    items.splice(newIndex, 0, movedItem);
 
     setLocalSettings({ ...localSettings, [type]: items });
-
-    e.currentTarget.classList.remove('drag-over-target');
-  };
-
-  // --- Touch Drag & Drop Handlers ---
-  const handleTouchStart = (e: React.TouchEvent, index: number, type: 'stages' | 'sources' | 'artTypes') => {
-    isTouchDragging.current = true;
-    if (type === 'stages') draggedStageItem.current = index;
-    else if (type === 'sources') draggedSourceItem.current = index;
-    else if (type === 'artTypes') draggedArtTypeItem.current = index;
-    e.currentTarget.classList.add('drag-active'); // Apply visual feedback
-    e.preventDefault(); // Prevent scrolling and other default touch behaviors
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent, type: 'stages' | 'sources' | 'artTypes') => {
-    e.currentTarget.classList.remove('drag-active'); // Remove visual feedback from dragged item
-    document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target')); // Clear any potential target highlights
-
-    let currentDraggedItem: number | null = null;
-    if (type === 'stages') currentDraggedItem = draggedStageItem.current;
-    else if (type === 'sources') currentDraggedItem = draggedSourceItem.current;
-    else if (type === 'artTypes') currentDraggedItem = draggedArtTypeItem.current;
-
-    if (currentDraggedItem === null) {
-      isTouchDragging.current = false;
-      return;
-    }
-
-    const touchedElement = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-    let dropTargetElement: HTMLElement | null = null;
-    let dropIndex: number | null = null;
-
-    // Traverse up to find a droppable parent
-    let current = touchedElement as HTMLElement;
-    while (current) {
-        if (current.dataset.index && current.dataset.type === type) {
-            dropTargetElement = current;
-            dropIndex = parseInt(current.dataset.index, 10);
-            break;
-        }
-        current = current.parentElement as HTMLElement;
-    }
-
-    if (dropTargetElement && dropIndex !== null && currentDraggedItem !== dropIndex) {
-      const items = [...(localSettings as any)[type]];
-      const [draggedContent] = items.splice(currentDraggedItem, 1);
-      items.splice(dropIndex, 0, draggedContent);
-      setLocalSettings({ ...localSettings, [type]: items });
-    }
-
-    draggedStageItem.current = null;
-    draggedSourceItem.current = null;
-    draggedArtTypeItem.current = null;
-    isTouchDragging.current = false;
-    e.preventDefault(); // Keep preventing default to finish the gesture cleanly
   };
 
 
@@ -194,26 +101,37 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, full
             </button>
           </div>
           <div className="space-y-4">
-            {localSettings.stages.map((stage, idx) => (
+            {localSettings.stages.map((stage, idx) => {
+              const isFirst = idx === 0;
+              const isLast = idx === localSettings.stages.length - 1;
+              return (
               <div 
                 key={idx} 
                 data-index={idx} /* Add data-index for touch drop target identification */
                 data-type="stages" /* Add data-type for touch drop target identification */
                 className={`group p-5 bg-[#FDFBF7] rounded-xl border border-[#D6D2C4] shadow-sm transition-all flex flex-col gap-4`}
-                draggable="true"
-                onDragStart={(e) => handleDragStart(e, idx, 'stages')}
-                onDragEnter={(e) => handleDragEnter(e, idx, 'stages')}
-                onDragLeave={handleDragLeave}
-                onDragEnd={handleDragEnd}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(e, idx, 'stages')}
-                onTouchStart={(e) => handleTouchStart(e, idx, 'stages')}
-                onTouchEnd={(e) => handleTouchEnd(e, 'stages')}
               >
-                {/* Top row: GripVertical, Stage Name, Progress %, Delete Button */}
+                {/* Top row: Up/Down buttons, Stage Name, Progress %, Delete Button */}
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <GripVertical className="w-5 h-5 text-slate-400 cursor-grab shrink-0" aria-label="拖拽调整顺序" />
+                    <div className="flex flex-col items-center justify-center shrink-0 gap-0.5">
+                      <button
+                        onClick={() => handleMoveItem(idx, 'up', 'stages')}
+                        disabled={isFirst}
+                        className={`p-1 rounded-full ${isFirst ? 'text-slate-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'} transition-all`}
+                        aria-label="上移阶段"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleMoveItem(idx, 'down', 'stages')}
+                        disabled={isLast}
+                        className={`p-1 rounded-full ${isLast ? 'text-slate-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'} transition-all`}
+                        aria-label="下移阶段"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                    </div>
                     <input 
                       className="bg-transparent font-bold text-sm text-[#2C332D] outline-none flex-1 truncate" 
                       value={stage.name} 
@@ -240,7 +158,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, full
                       <span className="text-[10px] font-bold text-slate-400">%</span>
                     </div>
                     <button 
-                      onClick={() => setLocalSettings({...localSettings, stages: localSettings.stages.filter((_, i) => i !== idx)})} 
+                      onClick={() => removeItem('stages', idx)} 
                       className="p-1.5 text-slate-300 hover:text-rose-600 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       aria-label="删除阶段"
                     >
@@ -284,7 +202,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, full
                   ))}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         </div>
 
@@ -305,23 +224,34 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, full
               </button>
             </div>
             <div className="grid grid-cols-1 gap-2">
-              {localSettings.sources.map((source, idx) => (
+              {localSettings.sources.map((source, idx) => {
+                const isFirst = idx === 0;
+                const isLast = idx === localSettings.sources.length - 1;
+                return (
                 <div 
                   key={idx} 
                   data-index={idx} /* Add data-index for touch drop target identification */
                   data-type="sources" /* Add data-type for touch drop target identification */
                   className={`group flex items-center gap-3 px-4 py-3 bg-[#FDFBF7] rounded-xl border border-[#D6D2C4] transition-all`}
-                  draggable="true"
-                  onDragStart={(e) => handleDragStart(e, idx, 'sources')}
-                  onDragEnter={(e) => handleDragEnter(e, idx, 'sources')}
-                  onDragLeave={handleDragLeave}
-                  onDragEnd={handleDragEnd}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, idx, 'sources')}
-                  onTouchStart={(e) => handleTouchStart(e, idx, 'sources')}
-                  onTouchEnd={(e) => handleTouchEnd(e, 'sources')}
                 >
-                  <GripVertical className="w-5 h-5 text-slate-400 cursor-grab shrink-0" aria-label="拖拽调整顺序" />
+                  <div className="flex flex-col items-center justify-center shrink-0 gap-0.5">
+                    <button
+                      onClick={() => handleMoveItem(idx, 'up', 'sources')}
+                      disabled={isFirst}
+                      className={`p-1 rounded-full ${isFirst ? 'text-slate-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'} transition-all`}
+                      aria-label="上移渠道"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleMoveItem(idx, 'down', 'sources')}
+                      disabled={isLast}
+                      className={`p-1 rounded-full ${isLast ? 'text-slate-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'} transition-all`}
+                      aria-label="下移渠道"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  </div>
                   <input 
                     className="bg-transparent font-bold text-sm text-[#2C332D] outline-none flex-1" 
                     value={source.name} 
@@ -346,14 +276,15 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, full
                     />
                   </div>
                   <button 
-                    onClick={() => setLocalSettings({...localSettings, sources: localSettings.sources.filter((_, i) => i !== idx)})} 
+                    onClick={() => removeItem('sources', idx)} 
                     className="p-1.5 text-slate-300 hover:text-rose-600 transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100"
                     aria-label="删除渠道"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
 
@@ -364,23 +295,34 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, full
               <h3 className="text-sm font-bold text-[#2C332D] tracking-tight uppercase">艺术稿件定义</h3>
             </div>
             <div className="flex flex-wrap gap-2">
-              {localSettings.artTypes.map((t, idx) => (
+              {localSettings.artTypes.map((t, idx) => {
+                const isFirst = idx === 0;
+                const isLast = idx === localSettings.artTypes.length - 1;
+                return (
                 <div 
                   key={idx} 
                   data-index={idx} /* Add data-index for touch drop target identification */
                   data-type="artTypes" /* Add data-type for touch drop target identification */
                   className={`relative group transition-all flex items-center gap-2 px-3 py-1.5 bg-[#FDFBF7] rounded-lg border border-[#D6D2C4] font-bold text-xs text-[#2C332D] hover:border-[#4B5E4F]`}
-                  draggable="true"
-                  onDragStart={(e) => handleDragStart(e, idx, 'artTypes')}
-                  onDragEnter={(e) => handleDragEnter(e, idx, 'artTypes')}
-                  onDragLeave={handleDragLeave}
-                  onDragEnd={handleDragEnd}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => handleDrop(e, idx, 'artTypes')}
-                  onTouchStart={(e) => handleTouchStart(e, idx, 'artTypes')}
-                  onTouchEnd={(e) => handleTouchEnd(e, 'artTypes')}
                 >
-                  <GripVertical className="w-4 h-4 text-slate-400 cursor-grab shrink-0" aria-label="拖拽调整顺序" />
+                  <div className="flex flex-col items-center justify-center shrink-0 -my-1 gap-0.5"> {/* Added negative margin to reduce height impact */}
+                    <button
+                      onClick={() => handleMoveItem(idx, 'up', 'artTypes')}
+                      disabled={isFirst}
+                      className={`p-0.5 rounded-full ${isFirst ? 'text-slate-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'} transition-all`}
+                      aria-label="上移艺术分类"
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => handleMoveItem(idx, 'down', 'artTypes')}
+                      disabled={isLast}
+                      className={`p-0.5 rounded-full ${isLast ? 'text-slate-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'} transition-all`}
+                      aria-label="下移艺术分类"
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  </div>
                   {editingArtTypeIndex === idx ? (
                     <input
                       type="text"
@@ -409,7 +351,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({ settings, setSettings, full
                     />
                   )}
                 </div>
-              ))}
+              );
+              })}
               <button 
                 onClick={() => setLocalSettings({...localSettings, artTypes: [...localSettings.artTypes, '新分类']})} 
                 className="px-3 py-1.5 border border-dashed border-[#D6D2C4] rounded-lg text-slate-400 hover:border-[#4B5E4F] hover:text-[#4B5E4F] transition-all text-xs font-bold"

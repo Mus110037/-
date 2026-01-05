@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Order, AppSettings, CommissionType } from '../types';
-import { Plus, Cookie, Target, Sprout, Leaf, X, Check, Wallet, CheckCircle2, Clock, Calendar, Briefcase, User, Sparkles, Loader2, GripVertical } from 'lucide-react'; 
+import { Plus, Cookie, Target, Sprout, Leaf, X, Check, Wallet, CheckCircle2, Clock, Calendar, Briefcase, User, Sparkles, Loader2, ChevronUp, ChevronDown } from 'lucide-react'; // Changed GripVertical to ChevronUp, ChevronDown
 import { format, addDays, parseISO } from 'date-fns'; // Added parseISO
 import { zhCN } from 'date-fns/locale/zh-CN';
 
@@ -19,11 +19,6 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdatePriorityIds, onEditOrder, onUpdateOrder, settings, onQuickAdd, schedulingInsights, isSchedulingAiLoading }) => {
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
-
-  // Drag and Drop Ref for Priority Orders: stores the ID of the dragged item
-  const draggedPriorityOrderItemId = useRef<string | null>(null);
-  // Track if a touch drag is active to prevent mixed behaviors
-  const isTouchDragging = useRef(false);
 
   const getStageConfig = (order: Order) => {
     return settings.stages.find(s => s.name === order.progressStage) || settings.stages[0];
@@ -95,106 +90,27 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
     }
   };
 
-  // --- Drag & Drop Handlers for Priority Orders (Mouse) ---
-  const handlePriorityDragStart = (e: React.DragEvent, id: string) => {
-    if (isTouchDragging.current) return; // Prevent mouse drag if touch drag is active
-    draggedPriorityOrderItemId.current = id;
-    e.dataTransfer.effectAllowed = "move";
-    e.currentTarget.classList.add('drag-active'); // Use global drag-active
-  };
+  // --- New: Move Up/Down Handlers for Priority Orders ---
+  const handleMovePriorityOrder = (id: string, direction: 'up' | 'down') => {
+    const currentIndex = priorityOrders.findIndex(order => order.id === id);
+    if (currentIndex === -1) return;
 
-  const handlePriorityDragEnter = (e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    if (draggedPriorityOrderItemId.current !== null && draggedPriorityOrderItemId.current !== id) {
-      e.currentTarget.classList.add('drag-over-target');
-    }
-  };
+    const newPriorityOrders = [...priorityOrders];
+    let newIndex = currentIndex;
 
-  const handlePriorityDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-over-target');
-  };
-
-  const handlePriorityDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-active');
-    document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target')); // Clear all targets
-    draggedPriorityOrderItemId.current = null;
-  };
-
-  const handlePriorityDrop = (e: React.DragEvent, dropId: string) => {
-    e.preventDefault();
-    if (draggedPriorityOrderItemId.current === null || draggedPriorityOrderItemId.current === dropId) {
-      e.currentTarget.classList.remove('drag-over-target');
-      return;
+    if (direction === 'up' && currentIndex > 0) {
+      newIndex = currentIndex - 1;
+    } else if (direction === 'down' && currentIndex < newPriorityOrders.length - 1) {
+      newIndex = currentIndex + 1;
+    } else {
+      return; // Can't move further up or down
     }
 
-    const currentPriorityOrders = [...priorityOrders];
-    const draggedId = draggedPriorityOrderItemId.current;
+    // Swap elements
+    const [movedOrder] = newPriorityOrders.splice(currentIndex, 1);
+    newPriorityOrders.splice(newIndex, 0, movedOrder);
 
-    const draggedOrderIndex = currentPriorityOrders.findIndex(order => order.id === draggedId);
-    const dropOrderIndex = currentPriorityOrders.findIndex(order => order.id === dropId);
-
-    if (draggedOrderIndex === -1 || dropOrderIndex === -1) {
-        e.currentTarget.classList.remove('drag-over-target');
-        return;
-    }
-
-    const [draggedOrder] = currentPriorityOrders.splice(draggedOrderIndex, 1);
-    currentPriorityOrders.splice(dropOrderIndex, 0, draggedOrder);
-
-    onUpdatePriorityIds(currentPriorityOrders.map(o => o.id));
-    e.currentTarget.classList.remove('drag-over-target');
-  };
-
-  // --- Touch Drag & Drop Handlers for Priority Orders ---
-  const handlePriorityTouchStart = (e: React.TouchEvent, id: string) => {
-    isTouchDragging.current = true;
-    draggedPriorityOrderItemId.current = id;
-    e.currentTarget.classList.add('drag-active'); // Apply visual feedback
-    e.preventDefault(); // Prevent scrolling and other default touch behaviors
-  };
-
-  const handlePriorityTouchEnd = (e: React.TouchEvent) => {
-    e.currentTarget.classList.remove('drag-active'); // Remove visual feedback from dragged item
-    document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target')); // Clear any potential target highlights
-
-    if (!draggedPriorityOrderItemId.current) {
-      isTouchDragging.current = false;
-      return;
-    }
-
-    const touchedElement = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-    let dropTargetElement: HTMLElement | null = null;
-
-    // Traverse up to find a droppable parent (the order item div)
-    let currentElement: HTMLElement | null = touchedElement as HTMLElement;
-    while (currentElement && currentElement !== e.currentTarget) { // Don't allow dropping on itself
-        if (currentElement.dataset.orderId) { // Check for a custom data attribute
-            dropTargetElement = currentElement;
-            break;
-        }
-        currentElement = currentElement.parentElement;
-    }
-
-    if (dropTargetElement && dropTargetElement.dataset.orderId) {
-      const dropId = dropTargetElement.dataset.orderId;
-      if (draggedPriorityOrderItemId.current !== dropId) { // Ensure it's not dropped on itself
-        const currentPriorityOrders = [...priorityOrders];
-        const draggedId = draggedPriorityOrderItemId.current;
-
-        const draggedOrderIndex = currentPriorityOrders.findIndex(order => order.id === draggedId);
-        const dropOrderIndex = currentPriorityOrders.findIndex(order => order.id === dropId);
-
-        if (draggedOrderIndex !== -1 && dropOrderIndex !== -1) {
-          const [draggedOrder] = currentPriorityOrders.splice(draggedOrderIndex, 1);
-          currentPriorityOrders.splice(dropOrderIndex, 0, draggedOrder);
-          onUpdatePriorityIds(currentPriorityOrders.map(o => o.id));
-        }
-      }
-    }
-
-    draggedPriorityOrderItemId.current = null;
-    isTouchDragging.current = false;
-    e.preventDefault(); // Keep preventing default to finish the gesture cleanly
+    onUpdatePriorityIds(newPriorityOrders.map(o => o.id));
   };
 
 
@@ -324,23 +240,16 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
           {/* 紧急焦点列表 */}
           <div className="grid grid-cols-1 gap-2.5 px-1">
             {priorityOrders.length > 0 ? (
-              priorityOrders.map((o) => {
+              priorityOrders.map((o, index) => {
                 const stage = getStageConfig(o);
+                const isFirst = index === 0;
+                const isLast = index === priorityOrders.length - 1;
+
                 return (
                   <div 
                     key={o.id} 
-                    data-order-id={o.id} /* Add data-order-id for touch drop target identification */
+                    data-order-id={o.id} 
                     className={`group relative`}
-                    draggable="true"
-                    onDragStart={(e) => handlePriorityDragStart(e, o.id)}
-                    onDragEnter={(e) => handlePriorityDragEnter(e, o.id)}
-                    onDragLeave={handlePriorityDragLeave}
-                    onDragEnd={handlePriorityDragEnd}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handlePriorityDrop(e, o.id)}
-                    onTouchStart={(e) => handlePriorityTouchStart(e, o.id)}
-                    onTouchEnd={handlePriorityTouchEnd}
-                    // onTouchMove for visual feedback is complex, omitted for minimal changes
                   >
                     <button 
                       onClick={(e) => { e.stopPropagation(); togglePriority(o.id); }}
@@ -351,9 +260,26 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                     </button>
 
                     <div onClick={() => onEditOrder(o)} className="bg-[#FDFBF7] p-3.5 rounded-[1.25rem] border border-[#E2E8E4]/60 card-baked-subtle-shadow hover:border-[#4B5E4F] transition-all cursor-pointer relative overflow-hidden active:scale-[0.98] flex items-center gap-3">
-                      {/* 拖拽手柄，在移动端始终可见，桌面端悬浮可见 */}
-                      <GripVertical className="w-5 h-5 text-slate-400 cursor-grab shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" aria-label="拖拽调整顺序" />
-                      {/* Original content of the card */}
+                      {/* 上移/下移按钮 */}
+                      <div className="flex flex-col items-center justify-center shrink-0 gap-0.5">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleMovePriorityOrder(o.id, 'up'); }}
+                          disabled={isFirst}
+                          className={`p-1 rounded-full ${isFirst ? 'text-slate-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'} transition-all`}
+                          aria-label="上移企划"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleMovePriorityOrder(o.id, 'down'); }}
+                          disabled={isLast}
+                          className={`p-1 rounded-full ${isLast ? 'text-slate-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'} transition-all`}
+                          aria-label="下移企划"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
+
                       <div className="flex items-center gap-3 md:gap-4 flex-1">
                         {/* 左侧：日期 */}
                         <div className="flex flex-col items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-xl transition-all shadow-sm bg-[#F4F1EA] text-[#2C332D] shrink-0">
@@ -365,7 +291,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                         <div className="flex-1 min-w-0 pr-1">
                           <h4 className="font-black text-[14px] md:text-lg tracking-tight truncate mb-2 text-[#2C332D]">{o.title}</h4>
                           <div className="flex items-center gap-1.5">
-                            <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner">
+                            <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner"> {/* Reverted h-2 to h-1 */}
                               <div 
                                 className="h-full transition-all duration-1000" 
                                 style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} 
@@ -421,7 +347,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, priorityOrderIds, onUpdat
                       <div className="flex-1 min-w-0 pr-1">
                         <h4 className="font-black text-[14px] md:text-lg tracking-tight truncate mb-2 text-[#2C332D]">{o.title}</h4>
                         <div className="flex items-center gap-1.5">
-                          <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner">
+                          <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner"> {/* Reverted h-2 to h-1 */}
                             <div 
                               className="h-full transition-all duration-1000" 
                               style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} 

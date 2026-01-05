@@ -15,7 +15,6 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.562.0",
     "marked": "^12.0.2",
-    "qrcode": "^1.5.3",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "recharts": "^3.6.0",

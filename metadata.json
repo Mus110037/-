@@ -1,7 +1,5 @@
 {
   "name": "画饼 | Piecasso",
   "description": "插画师专属的‘大饼’管理方案。别担心，只要排单够准，饼总能烤熟的。",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "requestFramePermissions": []
 }

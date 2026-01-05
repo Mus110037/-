@@ -51,15 +51,15 @@ export interface Order {
   description: string;
 }
 
-// 进度阶段：使用易懂的专业术语
+// 进度阶段：使用易懂的专业术语，采用“荧光笔”色系，更具活力和区分度
 export const DEFAULT_STAGES: StageConfig[] = [
-  { name: '待开始', progress: 0, color: '#FFF9C4' },
-  { name: '草稿阶段', progress: 15, color: '#FFECB3' },
-  { name: '线稿阶段', progress: 30, color: '#FCE4EC' },
-  { name: '铺色阶段', progress: 50, color: '#F3E5F5' },
-  { name: '细化阶段', progress: 75, color: '#E3F2FD' },
-  { name: '后期调整', progress: 90, color: '#E8F5E9' },
-  { name: '已成稿', progress: 100, color: '#D4A373' }
+  { name: '待开始', progress: 0, color: '#FFEB3B' }, // 鲜艳黄
+  { name: '草稿阶段', progress: 15, color: '#8BC34A' }, // 活力石灰绿
+  { name: '线稿阶段', progress: 30, color: '#03A9F4' }, // 天蓝
+  { name: '铺色阶段', progress: 50, color: '#FF7043' }, // 鲜亮橙
+  { name: '细化阶段', progress: 75, color: '#BA68C8' }, // 淡紫
+  { name: '后期调整', progress: 90, color: '#EC407A' }, // 粉红
+  { name: '已成稿', progress: 100, color: '#D4A373' } // 保持现有烘焙完成色，作为最终的沉稳色
 ];
 
 export const DEFAULT_SOURCES: SourceConfig[] = [
