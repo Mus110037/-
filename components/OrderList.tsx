@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Order, AppSettings, OrderStatus, CommissionType } from '../types';
 import { Trash2, X, CheckSquare, Square, ArrowUpDown, CalendarPlus, Sprout, Cookie, Leaf, ChevronDown, ChevronRight, Activity, CircleCheck, Briefcase, User, Rows3, Rows, Sparkles, Loader2 } from 'lucide-react';
-import { format, parseISO } from 'date-fns'; // Added parseISO
+import { format, parseISO } from 'date-fns';
 import { zhCN } from 'date-fns/locale/zh-CN';
 
 interface OrderListProps {
@@ -11,30 +11,16 @@ interface OrderListProps {
   onDeleteOrder: (id: string) => void;
   onUpdateOrder: (order: Order) => void;
   settings: AppSettings;
-  orderListInsights: string; // New prop for AI insights
-  isAiLoading: boolean; // New prop for AI loading state
+  orderListInsights: string;
+  isAiLoading: boolean;
 }
 
-// 定义一个更具活力且和谐的标签颜色调色板
 const TAG_COLOR_PALETTE = [
-  '#9B8D69', // Muted Gold
-  '#8D9C86', // Sage Green
-  '#C1AE9A', // Dusty Pinkish Beige
-  '#7D8B78', // Forest Green
-  '#D4A373', // Earth Orange
-  '#B78B6D', // Rust Brown
-  '#A1C9A7', // Light Olive Green
-  '#6A8F7F', // Deep Teal Green
+  '#9B8D69', '#8D9C86', '#C1AE9A', '#7D8B78', '#D4A373', '#B78B6D', '#A1C9A7', '#6A8F7F',
 ];
 
-// 用于企划卡片背景的循环颜色，增加明度差异
-const GROUP_BG_PALETTE = [
-  '#FDFBF7', // 纯白色 (上半月)
-  '#F9F9F4', // 略微暖白，但比F4F1EA更亮 (下半月)
-];
+const GROUP_BG_PALETTE = ['#FDFBF7', '#F9F9F4'];
 
-
-// 根据标签内容生成一个稳定的颜色
 const getTagColor = (tagName: string) => {
   let sum = 0;
   for (let i = 0; i < tagName.length; i++) {
@@ -50,7 +36,6 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
   const [sortMethod, setSortMethod] = useState<'deadline' | 'createdAt'>('deadline');
   const [showStatusFilter, setShowStatusFilter] = useState<'all' | 'pending' | 'completed'>('all');
   
-  // Section-level expansion states
   const [isPendingSectionExpanded, setIsPendingSectionExpanded] = useState(true);
   const [isCompletedSectionExpanded, setIsCompletedSectionExpanded] = useState(true);
 
@@ -65,7 +50,6 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
 
   const exportToCalendar = (e: React.MouseEvent, order: Order) => {
     e.stopPropagation();
-    // Use parseISO for consistent date parsing
     const date = format(parseISO(order.deadline), 'yyyyMMdd');
     const icsContent = [
       'BEGIN:VCALENDAR',
@@ -84,18 +68,16 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
     link.href = window.URL.createObjectURL(blob);
     link.setAttribute('download', `${order.title}_截稿日.ics`);
     document.body.appendChild(link);
-    link.click(); // Explicitly trigger the click event
-    // Wait a bit before revoking the URL and removing the link
+    link.click();
     setTimeout(() => {
       window.URL.revokeObjectURL(link.href);
       document.body.removeChild(link);
-    }, 100); // 100ms should be sufficient
+    }, 100);
   };
 
   const getGroupedOrders = useCallback((ordersToGroup: Order[]) => {
     const sorted = [...ordersToGroup].sort((a, b) => {
       if (sortMethod === 'deadline') {
-        // Use parseISO for consistent date parsing
         return parseISO(a.deadline).getTime() - parseISO(b.deadline).getTime();
       }
       return parseISO(b.createdAt).getTime() - parseISO(a.createdAt).getTime();
@@ -103,7 +85,6 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
   
     const groups: { key: string; orders: Order[] }[] = [];
     sorted.forEach(order => {
-      // Use parseISO for consistent date parsing
       const date = parseISO(order.deadline);
       const month = format(date, 'yyyy年 M月');
       const half = date.getDate() <= 15 ? '上半月' : '下半月';
@@ -121,7 +102,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
     const isCompleted = getStageConfig(order.progressStage).progress === 100;
     if (showStatusFilter === 'pending') return !isCompleted;
     if (showStatusFilter === 'completed') return isCompleted;
-    return true; // 'all'
+    return true;
   });
 
   const pendingOrders = filteredOrders.filter(order => getStageConfig(order.progressStage).progress < 100);
@@ -146,7 +127,6 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
 
   return (
     <div className="space-y-5 pb-32 animate-in fade-in duration-1000">
-      {/* AI 见解 / 加载动画 */}
       {settings.showAiUI && isAiLoading && (
           <div className="mb-6 p-4 bg-[#FDFBF7] border border-[#D6D2C4] rounded-xl text-[#2D3A30] flex items-center justify-center gap-3 card-baked-shadow animate-in fade-in slide-in-from-left-2">
             <Loader2 className="w-4 h-4 animate-spin text-[#4B5E4F]" />
@@ -220,7 +200,6 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
         </div>
       </div>
 
-      {/* 正在进行中分组 */}
       {pendingGroups.length > 0 && (showStatusFilter === 'all' || showStatusFilter === 'pending') && (
         <div className="space-y-3">
           <button 
@@ -230,7 +209,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
             aria-controls="pending-orders-section"
           >
             <ChevronRight className={`w-3.5 h-3.5 text-[#D4A373] transition-transform ${isPendingSectionExpanded ? 'rotate-90' : ''}`} />
-            <Activity className="w-3.5 h-3.5 text-[#D4A373]" /> {/* Added Activity Icon */}
+            <Activity className="w-3.5 h-3.5 text-[#D4A373]" />
             <h3 className="text-[10px] font-black text-[#4B5E4F] uppercase tracking-[0.2em] whitespace-nowrap">正在进行中</h3>
             <div className="flex-1 h-px bg-gradient-to-r from-[#D6D2C4]/40 to-transparent" />
           </button>
@@ -250,7 +229,6 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
                     const stage = getStageConfig(order.progressStage);
                     const isSelected = selectedIds.includes(order.id);
                     const isFinished = stage.progress === 100;
-                    
                     const artTypeColor = getTagColor(order.artType);
                     const sourceColor = getTagColor(order.source);
 
@@ -295,7 +273,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
                             </div>
 
                             <div className="flex items-center gap-1.5 mb-1.5">
-                              <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner"> {/* Progress bar height h-1 */}
+                              <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner">
                                 <div 
                                   className="h-full transition-all duration-1000" 
                                   style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} 
@@ -355,6 +333,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
             ))}
           </div>
         </div>
+      )}
 
       {/* 已完成分组 */}
       {completedGroups.length > 0 && (showStatusFilter === 'all' || showStatusFilter === 'completed') && (
@@ -385,7 +364,6 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
                     const stage = getStageConfig(order.progressStage);
                     const isSelected = selectedIds.includes(order.id);
                     const isFinished = stage.progress === 100;
-                    
                     const artTypeColor = getTagColor(order.artType);
                     const sourceColor = getTagColor(order.source);
 
@@ -430,7 +408,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
                             </div>
 
                             <div className="flex items-center gap-1.5 mb-1.5">
-                              <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner"> {/* Progress bar height h-1 */}
+                              <div className="w-16 md:w-28 h-1 bg-[#E8E6DF] rounded-full overflow-hidden shadow-inner">
                                 <div 
                                   className="h-full transition-all duration-1000" 
                                   style={{ width: `${stage.progress}%`, backgroundColor: stage.color }} 
@@ -490,6 +468,7 @@ const OrderList: React.FC<OrderListProps> = ({ orders, onEditOrder, onDeleteOrde
             ))}
           </div>
         </div>
+      )}
 
       {filteredOrders.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">

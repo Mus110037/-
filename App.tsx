@@ -65,7 +65,6 @@ const App: React.FC = () => {
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [showGuide, setShowGuide] = useState(() => !localStorage.getItem(ONBOARDING_KEY));
 
-  // 统一持久化逻辑
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
   }, [orders]);
@@ -129,7 +128,6 @@ const App: React.FC = () => {
 
   const handleUpdateSettings = (newSettings: AppSettings) => {
     setSettings(newSettings);
-    // 同时也需要处理已有企划的阶段名称映射（如果名称改了）
     setOrders(prev => prev.map(order => {
       const oldStageIdx = settings.stages.findIndex(s => s.name === order.progressStage);
       if (oldStageIdx !== -1 && newSettings.stages[oldStageIdx]) {
@@ -156,24 +154,36 @@ const App: React.FC = () => {
     if (showGuide) handleDismissGuide();
   };
 
-  // 修复删除逻辑：使用函数式更新
   const handleDeleteOrder = (id: string) => {
-    setOrders(prev => prev.filter(o => o.id !== id));
+    setOrders(prev => {
+      const filtered = prev.filter(o => o.id !== id);
+      console.log(`删除企划: ${id}, 剩余数量: ${filtered.length}`);
+      return filtered;
+    });
     setPriorityOrderIds(prev => prev.filter(pid => pid !== id));
   };
 
   const handleImportOrders = (newOrders: Order[], mode: 'append' | 'merge' | 'replace' = 'merge') => {
+    console.log(`正在执行导入，模式: ${mode}, 导入数量: ${newOrders.length}`);
     if (mode === 'replace') {
       setOrders([...newOrders]);
       setPriorityOrderIds([]);
-    } else {
+    } else if (mode === 'append') {
       setOrders(prev => [...prev, ...newOrders]);
+    } else {
+      setOrders(prev => {
+        const existingIds = new Set(prev.map(o => o.id));
+        const added = newOrders.filter(o => !existingIds.has(o.id));
+        return [...prev, ...added];
+      });
     }
     if (showGuide) handleDismissGuide();
   };
 
   const handleImportSettings = (importedSettings: AppSettings) => {
-    setSettings({ ...importedSettings });
+    if (importedSettings && importedSettings.stages) {
+      setSettings({ ...importedSettings });
+    }
   };
 
   const handleStartEdit = (order: Order) => {
