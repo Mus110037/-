@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, CheckCircle2, GitMerge, Info, Copy, ClipboardPaste, Zap, Share2, ClipboardCheck, Loader2, AlertTriangle } from 'lucide-react';
+import { X, CheckCircle2, GitMerge, Info, Copy, ClipboardPaste, Zap, Share2, ClipboardCheck, Loader2, AlertTriangle, ChevronDown } from 'lucide-react';
 import { Order, OrderStatus, AppSettings } from '../types';
 
 interface SyncModalProps {
@@ -38,11 +38,13 @@ const REVERSE_MAP: Record<string, string> = Object.fromEntries(
 );
 
 const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, settings, onImportOrders, onImportSettings }) => {
+  const [generatedToken, setGeneratedToken] = useState<string>('');
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [clipboardValue, setClipboardValue] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const tokenAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const supportsShare = typeof navigator.share !== 'undefined';
 
@@ -72,7 +74,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, settings
       }
       return bytes;
     } catch (e: any) {
-      throw new Error(`口令转换失败: ${e.message}`);
+      throw new Error(`Base64转换失败: ${e.message}`);
     }
   };
 
@@ -108,7 +110,6 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, settings
   };
 
   const compress = async (str: string): Promise<string> => {
-    if (typeof CompressionStream === 'undefined') throw new Error("设备不支持压缩");
     const buf = new TextEncoder().encode(str);
     const stream = new Blob([buf]).stream().pipeThrough(new CompressionStream('deflate'));
     const response = new Response(stream);
@@ -117,14 +118,13 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, settings
   };
 
   const decompress = async (base64: string): Promise<string> => {
-    if (typeof DecompressionStream === 'undefined') throw new Error("设备不支持解压");
     const compressedBuf = base64ToBytes(base64);
     const stream = new Blob([compressedBuf]).stream().pipeThrough(new DecompressionStream('deflate'));
     const response = new Response(stream);
     return await response.text();
   };
 
-  const handleCopyToClipboard = async () => {
+  const handleGenerateToken = async () => {
     setIsGenerating(true);
     setSyncError(null);
     try {
@@ -132,8 +132,17 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, settings
       const dataStr = JSON.stringify(combinedData);
       const compressed = await compress(dataStr);
       const token = `PCS:${compressed}`;
-      await navigator.clipboard.writeText(token);
-      showToastAndClose("口令已成功复制！");
+      setGeneratedToken(token);
+      
+      // 尝试自动复制
+      try {
+        await navigator.clipboard.writeText(token);
+        setLastAction("口令已生成并复制！");
+        setTimeout(() => setLastAction(null), 2000);
+      } catch (copyErr) {
+        // 如果自动复制由于移动端权限被拒，不报错，让用户手动复制文本框内容
+        console.warn("自动复制被拦截，请手动复制文本框内容");
+      }
     } catch (err: any) {
       setSyncError(`生成失败: ${err.message}`);
     } finally {
@@ -142,7 +151,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, settings
   };
 
   const processImportToken = async (token: string) => {
-    const rawToken = token.replace(/[\s\uFEFF\xA0\u200B\u200C\u200D]/g, '');
+    const rawToken = token.trim().replace(/[\s\uFEFF\xA0\u200B\u200C\u200D]/g, '');
     if (!rawToken) return;
 
     setIsGenerating(true);
@@ -161,43 +170,43 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, settings
       const importedOrders = parsed.orders ? unminifyOrders(parsed.orders) : [];
       const importedSettings = parsed.settings as AppSettings;
 
-      // 增强确认提示
+      if (importedOrders.length === 0) {
+        throw new Error("解析出的企划列表为空，请检查口令是否完整。");
+      }
+
+      const previewList = importedOrders.slice(0, 3).map(o => `· ${o.title}`).join('\n');
       const confirmMsg = [
-        `识别到以下内容：`,
-        `· 企划数量：${importedOrders.length} 个`,
-        `· 包含设置：${importedSettings ? '是' : '否'}`,
-        `\n⚠️ 同步将【全量覆盖】当前设备的所有数据，确定继续吗？`
-      ].join('\n');
+        `识别成功！`,
+        `企划数：${importedOrders.length} 个`,
+        importedOrders.length > 0 ? `${previewList}${importedOrders.length > 3 ? '\n...' : ''}` : '',
+        `\n⚠️ 同步将【全量覆盖】当前设备数据。`,
+        `确定同步吗？`
+      ].filter(Boolean).join('\n');
 
       if (confirm(confirmMsg)) {
-        console.log("正在执行同步覆盖...", importedOrders.length, "个企划");
         if (onImportOrders) onImportOrders(importedOrders, 'replace');
         if (importedSettings && onImportSettings) onImportSettings(importedSettings);
-        showToastAndClose("数据同步成功！");
+        showToastAndClose("同步成功！");
         setClipboardValue('');
       }
     } catch (e: any) {
-      console.error("同步处理异常:", e);
+      console.error("同步解析错误:", e);
       setSyncError(`解析失败: ${e.message}`);
     } finally {
       setIsGenerating(false);
     }
   };
 
+  // 修复错误：添加缺失的 handleQuickReadClipboard 函数以读取剪贴板口令
   const handleQuickReadClipboard = async () => {
     try {
-      setSyncError(null);
       const text = await navigator.clipboard.readText();
-      const cleanedText = text.replace(/[\s\uFEFF\xA0\u200B]/g, '');
-      if (cleanedText && (cleanedText.includes('PCS:') || cleanedText.includes('PC:'))) {
-        processImportToken(cleanedText);
-      } else {
-        setSyncError("剪贴板未发现有效口令。");
-        inputRef.current?.focus();
+      if (text) {
+        setClipboardValue(text);
+        processImportToken(text);
       }
-    } catch (err) {
-      setSyncError("请长按下方输入框选择“粘贴”。");
-      inputRef.current?.focus();
+    } catch (err: any) {
+      setSyncError(`读取剪贴板失败: ${err.message}`);
     }
   };
 
@@ -213,7 +222,7 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, settings
             </div>
             <div>
               <h2 className="text-xl font-bold text-[#2D3A30]">Piecasso 同步</h2>
-              <p className="text-[10px] text-[#4F6D58] font-black uppercase tracking-widest mt-1">跨端数据迁移方案</p>
+              <p className="text-[10px] text-[#4F6D58] font-black uppercase tracking-widest mt-1">移动端兼容版</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-300 hover:text-slate-900 transition-colors"><X className="w-6 h-6" /></button>
@@ -227,93 +236,99 @@ const SyncModal: React.FC<SyncModalProps> = ({ isOpen, onClose, orders, settings
           )}
 
           {syncError && (
-            <div className="p-4 bg-rose-50 text-rose-700 rounded-2xl font-bold text-[11px] flex items-start gap-2 animate-in fade-in">
+            <div className="p-4 bg-rose-50 text-rose-700 rounded-2xl font-bold text-[11px] flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div>
-                <p><strong>同步提示：</strong> {syncError}</p>
-                <button onClick={() => { setSyncError(null); setClipboardValue(''); }} className="mt-2 text-[9px] font-black text-rose-800 underline uppercase">清除重试</button>
-              </div>
+              <div><p><strong>同步提示：</strong> {syncError}</p></div>
             </div>
           )}
 
+          {/* 生成区域 */}
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <button 
-                onClick={handleCopyToClipboard} 
-                disabled={isGenerating}
-                className="flex flex-col items-center gap-2 p-5 bg-amber-50 border border-amber-100 rounded-3xl hover:bg-amber-100 transition-all disabled:opacity-50 active:scale-95"
-              >
-                <Copy className="w-5 h-5 text-amber-600" />
-                <span className="text-[10px] font-bold text-amber-900">复制当前口令</span>
-              </button>
-              <button 
-                onClick={async () => {
-                  if (orders.length === 0) return alert("企划列表为空");
-                  setIsGenerating(true);
-                  try {
-                    const combinedData = { orders: minifyOrders(orders), settings };
-                    const dataStr = JSON.stringify(combinedData);
-                    const compressed = await compress(dataStr);
-                    const token = `PCS:${compressed}`;
-                    const file = new File([token], "Piecasso备份.txt", { type: 'text/plain' });
-                    await navigator.share({ files: [file], title: 'Piecasso 同步数据' });
-                  } catch(e) { console.error(e); } finally { setIsGenerating(false); }
-                }} 
-                disabled={isGenerating || !supportsShare}
-                className="flex flex-col items-center gap-2 p-5 bg-blue-50 border border-blue-100 rounded-3xl hover:bg-blue-100 transition-all disabled:opacity-50 active:scale-95"
-              >
-                <Share2 className="w-5 h-5 text-blue-600" />
-                <span className="text-[10px] font-bold text-blue-900">分享备份文件</span>
-              </button>
-            </div>
+             <div className="bg-[#F4F1EA] p-6 rounded-3xl border-2 border-[#D1D9D3] space-y-4">
+                <div className="flex items-center justify-between">
+                   <h3 className="text-[10px] font-black text-[#2D3A30] uppercase tracking-widest">发送数据</h3>
+                   <button 
+                     onClick={handleGenerateToken} 
+                     disabled={isGenerating}
+                     className="px-4 py-2 bg-[#3A5A40] text-white text-[10px] font-black rounded-xl hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
+                   >
+                     {generatedToken ? "重新生成" : "生成同步口令"}
+                   </button>
+                </div>
 
-            <div className="pt-4 border-t border-[#E2E8E4] space-y-4">
-               <button 
-                onClick={handleQuickReadClipboard} 
-                disabled={isGenerating}
-                className="w-full flex items-center justify-center gap-3 p-5 bg-[#3A5A40] text-white rounded-3xl hover:opacity-90 shadow-xl transition-all disabled:opacity-50 active:scale-95"
-               >
-                 <ClipboardCheck className="w-5 h-5" />
-                 <span className="text-[11px] font-bold uppercase tracking-widest">一键从剪贴板同步</span>
-               </button>
+                {generatedToken && (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <textarea
+                      ref={tokenAreaRef}
+                      readOnly
+                      value={generatedToken}
+                      className="w-full p-4 bg-white border border-[#D6D2C4] rounded-xl text-[10px] font-mono break-all h-24 outline-none focus:border-[#D4A373]"
+                      onClick={() => tokenAreaRef.current?.select()}
+                      placeholder="口令内容..."
+                    />
+                    <div className="flex gap-2">
+                       <button 
+                         onClick={() => {
+                           navigator.clipboard.writeText(generatedToken);
+                           setLastAction("口令已复制！");
+                           setTimeout(() => setLastAction(null), 2000);
+                         }}
+                         className="flex-1 flex items-center justify-center gap-2 py-3 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl font-bold text-[10px] hover:bg-amber-100 transition-all"
+                       >
+                         <Copy className="w-3.5 h-3.5" /> 点击复制口令
+                       </button>
+                       <button 
+                         onClick={async () => {
+                           const file = new File([generatedToken], "Piecasso_Backup.txt", { type: 'text/plain' });
+                           try { await navigator.share({ files: [file], title: 'Piecasso 数据备份' }); } catch(e) {}
+                         }}
+                         disabled={!supportsShare}
+                         className="flex items-center justify-center p-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl disabled:opacity-30"
+                       >
+                         <Share2 className="w-4 h-4" />
+                       </button>
+                    </div>
+                    <p className="text-[9px] text-amber-600 font-bold text-center">↑ 自动复制若失败，请长按上方框内文本手动复制</p>
+                  </div>
+                )}
+             </div>
 
-               <div className="relative">
-                 <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                   <ClipboardPaste className="w-4 h-4 text-slate-400" />
-                 </div>
-                 <input 
-                   ref={inputRef}
-                   type="text" 
-                   value={clipboardValue}
-                   onChange={(e) => {
-                     setClipboardValue(e.target.value);
-                     if (e.target.value.includes('PCS:')) {
-                        processImportToken(e.target.value);
-                     }
-                   }}
-                   placeholder="手动粘贴：长按并选择粘贴..."
-                   className="w-full pl-11 pr-4 py-5 bg-[#F4F1EA] border-2 border-transparent focus:border-[#3A5A40] rounded-2xl text-[12px] font-medium outline-none transition-all placeholder:text-slate-400"
-                 />
-               </div>
-               
-               {clipboardValue.trim() && !isGenerating && (
-                 <button
-                   onClick={() => processImportToken(clipboardValue)}
-                   className="w-full flex items-center justify-center gap-3 p-4 bg-[#D4A373] text-white rounded-2xl hover:opacity-90 transition-all shadow-lg active:scale-95"
-                 >
-                   <Zap className="w-4 h-4" />
-                   <span className="text-[11px] font-bold uppercase tracking-widest">确认导入此数据</span>
-                 </button>
-               )}
-            </div>
+             {/* 导入区域 */}
+             <div className="pt-4 border-t border-[#E2E8E4] space-y-4">
+                <button 
+                  onClick={handleQuickReadClipboard} 
+                  disabled={isGenerating}
+                  className="w-full flex items-center justify-center gap-3 p-5 bg-[#3A5A40] text-white rounded-3xl hover:opacity-90 shadow-xl transition-all disabled:opacity-50 active:scale-95"
+                >
+                  <ClipboardCheck className="w-5 h-5" />
+                  <span className="text-[11px] font-bold uppercase tracking-widest">一键读取剪贴板同步</span>
+                </button>
+
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400">
+                    <ClipboardPaste className="w-4 h-4" />
+                  </div>
+                  <input 
+                    ref={inputRef}
+                    type="text" 
+                    value={clipboardValue}
+                    onChange={(e) => {
+                      setClipboardValue(e.target.value);
+                      if (e.target.value.includes('PCS:')) processImportToken(e.target.value);
+                    }}
+                    placeholder="或在此手动粘贴口令..."
+                    className="w-full pl-11 pr-4 py-5 bg-[#F4F1EA] border-2 border-transparent focus:border-[#3A5A40] rounded-2xl text-[12px] font-medium outline-none transition-all"
+                  />
+                </div>
+             </div>
           </div>
           
-          <div className="p-5 bg-[#F4F1EA] rounded-3xl border border-[#D1D9D3] flex items-start gap-4">
-            <Info className="w-4 h-4 text-[#4F6D58] mt-0.5 shrink-0" />
+          <div className="p-5 bg-blue-50 rounded-3xl border border-blue-100 flex items-start gap-4">
+            <Info className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-[#2D3A30] uppercase tracking-tight">导入提示</p>
-              <p className="text-[9px] text-[#4F6D58] leading-relaxed">
-                导入操作是不可逆的。如果您有多台设备，请务必先通过“复制当前口令”备份旧设备数据。
+              <p className="text-[10px] font-black text-blue-900 uppercase tracking-tight">小贴士</p>
+              <p className="text-[9px] text-blue-700 leading-relaxed">
+                手机浏览器有严格的安全保护。建议先点击“生成口令”，看到文本后长按选择“全选”并“复制”，再到另一台设备点击“一键读取”。
               </p>
             </div>
           </div>

@@ -157,17 +157,26 @@ const App: React.FC = () => {
   const handleDeleteOrder = (id: string) => {
     setOrders(prev => {
       const filtered = prev.filter(o => o.id !== id);
-      console.log(`删除企划: ${id}, 剩余数量: ${filtered.length}`);
-      return filtered;
+      console.log("执行删除:", id, "剩余:", filtered.length);
+      return [...filtered];
     });
     setPriorityOrderIds(prev => prev.filter(pid => pid !== id));
   };
 
   const handleImportOrders = (newOrders: Order[], mode: 'append' | 'merge' | 'replace' = 'merge') => {
-    console.log(`正在执行导入，模式: ${mode}, 导入数量: ${newOrders.length}`);
+    console.log(`执行数据导入: ${mode}, 导入数: ${newOrders.length}`);
+    
     if (mode === 'replace') {
+      // 全量替换时，先写入存储再更新状态，确保万无一失
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newOrders));
+      localStorage.setItem(PRIORITY_IDS_KEY, JSON.stringify([]));
       setOrders([...newOrders]);
       setPriorityOrderIds([]);
+      
+      // 弹出轻提示建议刷新，或者直接强制渲染
+      setTimeout(() => {
+        alert("同步数据已成功加载。");
+      }, 500);
     } else if (mode === 'append') {
       setOrders(prev => [...prev, ...newOrders]);
     } else {
@@ -182,6 +191,7 @@ const App: React.FC = () => {
 
   const handleImportSettings = (importedSettings: AppSettings) => {
     if (importedSettings && importedSettings.stages) {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(importedSettings));
       setSettings({ ...importedSettings });
     }
   };
